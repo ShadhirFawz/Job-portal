@@ -25,8 +25,8 @@ export async function uploadProfileImage(
     return path
 }
 
-export function getPublicUrl(path: string | null): string | null {
-    if (!path) return null
+export function getPublicUrl(path?: string | null): string | undefined {
+    if (!path) return undefined
     const { data } = supabase.storage.from('profile-images').getPublicUrl(path)
     return data.publicUrl
 }

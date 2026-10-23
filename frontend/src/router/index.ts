@@ -21,19 +21,22 @@ const router = createRouter({
       name: 'auth-callback',
       component: () => import('@/pages/auth/Callback.vue')
     },
-    // {
-    //   path: '/profile/complete',
-    //   name: 'profile-complete',
-    //   component: () => import('@/pages/profile/CompleteProfile.vue'),
-    //   meta: { requiresAuth: true }
-    // },
-    // {
-    //   path: '/',
-    //   name: 'home',
-    //   component: () => import('@/pages/Home.vue'),
-    //   meta: { requiresAuth: true }
-    // }
-    // more routes later
+    {
+      path: '/profile/complete',
+      name: 'profile-complete',
+      component: () => import('@/pages/profile/CompleteProfile.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/',
+      name: 'home',
+      component: () => import('@/pages/Home.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/'
+    }
   ]
 })
 

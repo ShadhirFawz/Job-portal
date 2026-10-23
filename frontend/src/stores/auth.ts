@@ -12,10 +12,17 @@ export interface AppUser {
     last_name: string | null
     display_name: string | null
     avatar_path: string | null
+    cover_path: string | null
+    phone: string | null
+    headline: string | null
+    current_job_title: string | null
+    current_company: string | null
+    bio: string | null
+    country_code: string | null
+    city: string | null
     role: AppRole
     status: string
     is_profile_complete: boolean
-    // add more fields later as needed
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -59,6 +66,29 @@ export const useAuthStore = defineStore('auth', () => {
 
         if (error) {
             console.error('Failed to fetch user profile', error)
+            // Fallback for newly created users where row in public.users is not yet present
+            if (session.value?.user) {
+                const su = session.value.user
+                user.value = {
+                    id: su.id,
+                    email: su.email || '',
+                    first_name: su.user_metadata?.first_name || null,
+                    last_name: su.user_metadata?.last_name || null,
+                    display_name: su.user_metadata?.display_name || null,
+                    avatar_path: null,
+                    cover_path: null,
+                    phone: su.phone || null,
+                    headline: null,
+                    current_job_title: null,
+                    current_company: null,
+                    bio: null,
+                    country_code: null,
+                    city: null,
+                    role: 'candidate',
+                    status: 'active',
+                    is_profile_complete: false
+                }
+            }
             return
         }
 
@@ -79,6 +109,10 @@ export const useAuthStore = defineStore('auth', () => {
 
     async function signIn(email: string, password: string) {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+        if (!error && data.session) {
+            session.value = data.session
+            await fetchUserProfile()
+        }
         return { data, error }
     }
 
