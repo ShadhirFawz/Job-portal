@@ -5,6 +5,18 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      path: '/organizations/create',
+      name: 'create-organization',
+      component: () => import('@/pages/organizations/CreateOrganization.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/organizations/:id',
+      name: 'organization-detail',
+      component: () => import('@/pages/organizations/OrganizationDetail.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/pages/auth/Login.vue'),
