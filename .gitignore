@@ -22,3 +22,5 @@ Thumbs.db
 
 # Supabase
 supabase/.temp/
+
+*.Development.json
