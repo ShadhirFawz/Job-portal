@@ -17,6 +17,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/organizations/:id/invite',
+      name: 'invite-member',
+      component: () => import('@/pages/organizations/InviteMember.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/pages/auth/Login.vue'),
