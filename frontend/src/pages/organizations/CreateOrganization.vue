@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
-import { uploadOrganizationImage } from '@/composables/useOrganizationImage'
+import { uploadOrganizationImage, getOrganizationImageUrl } from '@/composables/useOrganizationImage'
 
 const router = useRouter()
 const auth = useAuthStore()

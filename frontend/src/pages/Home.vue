@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { getPublicUrl } from '@/composables/useProfileImage'
+import { getProfileImageUrl as getPublicUrl } from '@/composables/useProfileImage'
 
 const router = useRouter()
 const auth = useAuthStore()
