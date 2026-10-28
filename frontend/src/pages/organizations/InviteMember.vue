@@ -91,7 +91,7 @@ async function handleInvite() {
 
         if (updateError) throw updateError
 
-        successMsg.value = 'Invitation sent successfully! The user will need approval (or you can approve them from the Team tab).'
+        successMsg.value = 'Invitation sent successfully! The user is now listed in the Team tab.'
         email.value = ''
         title.value = ''
         return
@@ -113,7 +113,7 @@ async function handleInvite() {
 
     if (insertError) throw insertError
 
-    successMsg.value = 'Invitation sent successfully! The user will need approval (or you can approve them from the Team tab).'
+    successMsg.value = 'Invitation sent successfully! The user is now listed in the Team tab.'
     email.value = ''
     title.value = ''
 
@@ -129,14 +129,28 @@ async function handleInvite() {
   <div class="min-h-screen bg-gray-50 py-10 px-4">
     <div class="max-w-lg mx-auto">
       <div class="mb-6">
-        <button @click="router.back()" class="text-sm text-indigo-600 hover:underline">← Back to company</button>
+        <button @click="router.push(`/organizations/${orgId}?tab=team`)" class="text-sm text-indigo-600 hover:underline">
+          ← Back to company team
+        </button>
         <h1 class="text-2xl font-bold text-gray-900 mt-2">Invite Team Member</h1>
         <p class="text-gray-600 mt-1">Invite an existing user to join your organization as staff.</p>
       </div>
 
       <form @submit.prevent="handleInvite" class="bg-white shadow rounded-lg p-6 space-y-5">
         <div v-if="errorMsg" class="rounded-md bg-red-50 p-3 text-sm text-red-700">{{ errorMsg }}</div>
-        <div v-if="successMsg" class="rounded-md bg-green-50 p-3 text-sm text-green-700">{{ successMsg }}</div>
+        
+        <div v-if="successMsg" class="rounded-md bg-green-50 p-4 text-sm text-green-700 space-y-2">
+          <p class="font-medium">{{ successMsg }}</p>
+          <div class="pt-2 flex gap-3">
+            <button
+              type="button"
+              @click="router.push(`/organizations/${orgId}?tab=team`)"
+              class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-semibold rounded text-white bg-green-600 hover:bg-green-700 shadow-sm"
+            >
+              View Team Members →
+            </button>
+          </div>
+        </div>
 
         <div>
           <label class="block text-sm font-medium text-gray-700">Email address *</label>
