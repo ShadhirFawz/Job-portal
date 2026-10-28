@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationsStore } from '@/stores/organizations'
 import { getOrganizationImageUrl } from '@/composables/useOrganizationImage'
@@ -14,6 +15,7 @@ const activeTab = ref<'overview' | 'team' | 'jobs' | 'settings'>('overview')
 const members = ref<any[]>([])
 const loadingMembers = ref(false)
 const isOrgAdmin = ref(false)
+const actionLoading = ref<string | null>(null)
 
 const org = computed(() => orgStore.currentOrganization)
 
@@ -35,7 +37,7 @@ async function checkIfOrgAdmin(orgId: string) {
     .eq('organization_id', orgId)
     .eq('user_id', auth.user.id)
     .eq('status', 'active')
-    .single()
+    .maybeSingle()
 
   isOrgAdmin.value = data?.role === 'org_admin'
 }
@@ -46,6 +48,7 @@ async function fetchMembers(orgId: string) {
     .from('organization_members')
     .select(`
       id,
+      user_id,
       role,
       status,
       title,
@@ -66,8 +69,59 @@ async function fetchMembers(orgId: string) {
 
   if (!error) {
     members.value = data || []
+  } else {
+    console.error('Error fetching members:', error)
   }
   loadingMembers.value = false
+}
+
+async function approveMember(memberId: string) {
+  actionLoading.value = memberId
+  try {
+    const { error } = await supabase
+      .from('organization_members')
+      .update({
+        status: 'active',
+        joined_at: new Date().toISOString()
+      })
+      .eq('id', memberId)
+
+    if (error) throw error
+
+    if (org.value) {
+      await fetchMembers(org.value.id)
+    }
+  } catch (err: any) {
+    alert(`Failed to approve member: ${err.message}`)
+  } finally {
+    actionLoading.value = null
+  }
+}
+
+async function revokeMember(memberId: string) {
+  if (!confirm('Are you sure you want to cancel / revoke this invitation?')) return
+
+  actionLoading.value = memberId
+  try {
+    const { error } = await supabase
+      .from('organization_members')
+      .update({
+        status: 'revoked',
+        revoked_at: new Date().toISOString(),
+        revoked_by: auth.user?.id
+      })
+      .eq('id', memberId)
+
+    if (error) throw error
+
+    if (org.value) {
+      await fetchMembers(org.value.id)
+    }
+  } catch (err: any) {
+    alert(`Failed to revoke invitation: ${err.message}`)
+  } finally {
+    actionLoading.value = null
+  }
 }
 
 function switchTab(tab: typeof activeTab.value) {
@@ -194,16 +248,19 @@ function switchTab(tab: typeof activeTab.value) {
           <ul v-else class="divide-y divide-gray-200">
             <li v-for="member in members" :key="member.id" class="p-4 flex items-center justify-between">
               <div class="flex items-center gap-4">
-                <div class="h-10 w-10 rounded-full bg-gray-200 overflow-hidden">
+                <div class="h-10 w-10 rounded-full bg-gray-200 overflow-hidden shrink-0">
                   <img
                     v-if="member.user?.avatar_path"
                     :src="getOrganizationImageUrl(member.user.avatar_path) || ''"
                     class="h-full w-full object-cover"
                   />
+                  <div v-else class="h-full w-full flex items-center justify-center text-gray-400 text-sm font-semibold">
+                    {{ (member.user?.display_name || member.user?.first_name || member.user?.email || 'M').charAt(0).toUpperCase() }}
+                  </div>
                 </div>
                 <div>
                   <p class="font-medium text-gray-900">
-                    {{ member.user?.display_name || member.user?.first_name || member.user?.email }}
+                    {{ member.user?.display_name || member.user?.first_name || member.user?.email || 'Registered Member' }}
                   </p>
                   <p class="text-sm text-gray-500">
                     {{ member.title || member.role }} 
@@ -224,6 +281,24 @@ function switchTab(tab: typeof activeTab.value) {
                   {{ member.status }}
                 </span>
                 <span class="text-xs text-gray-500 capitalize">{{ member.role.replace('_', ' ') }}</span>
+
+                <!-- Org admin action controls for pending invites -->
+                <div v-if="isOrgAdmin && member.status === 'pending'" class="flex items-center gap-1.5 ml-2">
+                  <button
+                    :disabled="actionLoading === member.id"
+                    @click="approveMember(member.id)"
+                    class="px-2.5 py-1 text-xs font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded transition-colors"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    :disabled="actionLoading === member.id"
+                    @click="revokeMember(member.id)"
+                    class="px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 border border-red-200 disabled:opacity-50 rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </li>
           </ul>
@@ -283,11 +358,7 @@ function switchTab(tab: typeof activeTab.value) {
 
 <script lang="ts">
 // Temporary simple verification (we will improve it)
-import { supabase } from '@/lib/supabase'
-
 async function sendVerificationEmail() {
-  // For now we just show an alert.
-  // Real implementation will use a verification token table + email.
   alert('Verification email feature will be fully implemented next. For development you can manually set official_email_verified = true in the database.')
 }
 </script>
