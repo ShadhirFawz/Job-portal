@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
+import { memberService } from '@/services/member.service'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,94 +31,19 @@ async function handleInvite() {
       throw new Error('You cannot invite yourself to the organization.')
     }
 
-    // 1. Find user by email (try RPC first for SECURITY DEFINER bypass, fallback to direct query)
-    let user: { id: string; email: string } | null = null
-
-    const { data: rpcData, error: rpcError } = await supabase
-      .rpc('find_user_by_email', { search_email: trimmedEmail })
-
-    if (!rpcError && rpcData && rpcData.length > 0) {
-      user = rpcData[0]
-    } else {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, email')
-        .ilike('email', trimmedEmail)
-        .maybeSingle()
-
-      if (userError) {
-        throw new Error(`Failed to query users: ${userError.message}`)
-      }
-      user = userData
-    }
-
-    if (!user) {
-      throw new Error('No user found with this email. They must register on the platform first.')
-    }
-
-    // 2. Check if already a member
-    const { data: existing, error: existingError } = await supabase
-      .from('organization_members')
-      .select('id, status')
-      .eq('organization_id', orgId)
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (existingError) {
-      throw new Error(`Failed to check existing membership: ${existingError.message}`)
-    }
-
-    if (existing) {
-      if (existing.status === 'active') {
-        throw new Error('This user is already an active member of the organization.')
-      } else if (existing.status === 'pending') {
-        throw new Error('This user already has a pending invitation for this organization.')
-      } else if (existing.status === 'revoked' || existing.status === 'rejected') {
-        // Re-activate as pending invite
-        const { error: updateError } = await supabase
-          .from('organization_members')
-          .update({
-            role: role.value,
-            status: 'pending',
-            title: title.value.trim() || null,
-            invited_by: auth.user!.id,
-            invited_at: new Date().toISOString(),
-            revoked_at: null,
-            revoked_by: null,
-            rejection_reason: null
-          })
-          .eq('id', existing.id)
-
-        if (updateError) throw updateError
-
-        successMsg.value = 'Invitation sent successfully! The user is now listed in the Team tab.'
-        email.value = ''
-        title.value = ''
-        return
-      }
-    }
-
-    // 3. Create membership with pending status
-    const { error: insertError } = await supabase
-      .from('organization_members')
-      .insert({
-        organization_id: orgId,
-        user_id: user.id,
-        role: role.value,
-        status: 'pending',
-        title: title.value.trim() || null,
-        invited_by: auth.user!.id,
-        invited_at: new Date().toISOString()
-      })
-
-    if (insertError) throw insertError
+    await memberService.inviteMember({
+      organizationId: orgId,
+      email: trimmedEmail,
+      role: role.value,
+      title: title.value.trim() || null,
+      inviterId: auth.user!.id,
+    })
 
     successMsg.value = 'Invitation sent successfully! The user is now listed in the Team tab.'
     email.value = ''
     title.value = ''
-
   } catch (err: any) {
-    errorMsg.value = err.message
+    errorMsg.value = err.message || 'Failed to send invitation. Please try again.'
   } finally {
     loading.value = false
   }

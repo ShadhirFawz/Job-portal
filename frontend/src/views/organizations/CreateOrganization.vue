@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
-import { uploadOrganizationImage, getOrganizationImageUrl } from '@/composables/useOrganizationImage'
+import { organizationService } from '@/services/organization.service'
+import { profileService } from '@/services/profile.service'
+import { uploadOrganizationImage } from '@/composables/useOrganizationImage'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -56,10 +57,9 @@ async function handleCreate() {
   errorMsg.value = ''
 
   try {
-    // 1. Create organization
-    const { data: org, error: orgError } = await supabase
-      .from('organizations')
-      .insert({
+    // 1. Create organization & auto-add creator as org_admin
+    const org = await organizationService.createOrganization(
+      {
         name: name.value.trim(),
         legal_name: legalName.value.trim() || null,
         official_email: officialEmail.value.trim().toLowerCase(),
@@ -74,17 +74,13 @@ async function handleCreate() {
         country_code: countryCode.value.trim() || null,
         city: city.value.trim() || null,
         address_line1: addressLine1.value.trim() || null,
-        created_by: auth.user.id,
-        status: 'pending_verification'
-      })
-      .select()
-      .single()
-
-    if (orgError) throw orgError
+      },
+      auth.user.id
+    )
 
     // 2. Upload images (now that we have org.id)
-    let avatarPath = null
-    let coverPath = null
+    let avatarPath: string | null = null
+    let coverPath: string | null = null
 
     if (avatarFile.value) {
       avatarPath = await uploadOrganizationImage(org.id, avatarFile.value, 'avatar')
@@ -94,38 +90,14 @@ async function handleCreate() {
     }
 
     // 3. Update organization with image paths + generate slug
-    const { error: updateError } = await supabase
-      .from('organizations')
-      .update({
-        avatar_path: avatarPath,
-        cover_path: coverPath,
-        slug: org.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-      })
-      .eq('id', org.id)
+    await organizationService.updateOrganization(org.id, {
+      avatar_path: avatarPath,
+      cover_path: coverPath,
+    })
 
-    if (updateError) throw updateError
-
-    // 4. Add creator as org_admin
-    const { error: memberError } = await supabase
-      .from('organization_members')
-      .insert({
-        organization_id: org.id,
-        user_id: auth.user.id,
-        role: 'org_admin',
-        status: 'active',
-        joined_at: new Date().toISOString(),
-        title: 'Founder / Administrator'
-      })
-
-    if (memberError) throw memberError
-
-    // 5. Promote user role to org_admin (if not already higher)
+    // 4. Promote user role to org_admin (if candidate)
     if (auth.user.role === 'candidate') {
-      await supabase
-        .from('users')
-        .update({ role: 'org_admin' })
-        .eq('id', auth.user.id)
-
+      await profileService.updateUserProfile(auth.user.id, { role: 'org_admin' } as any)
       await auth.fetchUserProfile() // refresh local state
     }
 

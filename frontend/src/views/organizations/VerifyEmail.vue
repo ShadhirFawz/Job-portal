@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { supabase } from '@/lib/supabase'
+import { organizationService } from '@/services/organization.service'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,53 +20,12 @@ onMounted(async () => {
   }
 
   try {
-    // 1. Find the token
-    const { data: verification, error } = await supabase
-      .from('organization_email_verifications')
-      .select('*, organization:organizations(id, name, official_email)')
-      .eq('token', token)
-      .is('verified_at', null)
-      .single()
-
-    if (error || !verification) {
-      status.value = 'error'
-      message.value = 'Invalid or already used verification link'
-      return
-    }
-
-    // 2. Check expiry
-    if (new Date(verification.expires_at) < new Date()) {
-      status.value = 'expired'
-      message.value = 'This verification link has expired. Please request a new one.'
-      return
-    }
-
-    // 3. Mark as verified
-    const { error: updateTokenError } = await supabase
-      .from('organization_email_verifications')
-      .update({ verified_at: new Date().toISOString() })
-      .eq('id', verification.id)
-
-    if (updateTokenError) throw updateTokenError
-
-    // 4. Update organization
-    const { error: orgError } = await supabase
-      .from('organizations')
-      .update({
-        official_email_verified: true,
-        status: 'active',
-        verified_at: new Date().toISOString()
-      })
-      .eq('id', verification.organization_id)
-
-    if (orgError) throw orgError
-
-    orgName.value = verification.organization?.name || 'Organization'
+    const res = await organizationService.verifyEmailToken(token)
+    orgName.value = res.organizationName || 'Organization'
     status.value = 'success'
     message.value = 'Official email verified successfully! Your company is now active.'
-
   } catch (err: any) {
-    status.value = 'error'
+    status.value = err.message?.includes('expired') ? 'expired' : 'error'
     message.value = err.message || 'Verification failed'
   }
 })

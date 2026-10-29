@@ -17,9 +17,10 @@ import {
   AlertCircle,
   ShieldAlert,
 } from 'lucide-vue-next'
-import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationsStore } from '@/stores/organizations'
+import { organizationService } from '@/services/organization.service'
+import type { OrganizationUpdateInput } from '@/types/organization'
 import {
   uploadOrganizationImage,
   deleteOrganizationImage,
@@ -99,36 +100,21 @@ async function loadAndAuthorize() {
 
   try {
     // 1. Fetch organization data
-    const { data: org, error: orgErr } = await supabase
-      .from('organizations')
-      .select('*')
-      .eq('id', orgId)
-      .single()
+    const org = await organizationService.getOrganization(orgId)
 
-    if (orgErr || !org) {
+    if (!org) {
       toast.error('Organization not found.')
       router.replace('/organizations')
       return
     }
 
     // 2. Check authorization: must be creator, super_admin, or active org_admin member
-    let isAllowed = false
-
-    if (org.created_by === auth.user.id || auth.user.role === 'super_admin') {
-      isAllowed = true
-    } else {
-      const { data: member } = await supabase
-        .from('organization_members')
-        .select('role, status')
-        .eq('organization_id', orgId)
-        .eq('user_id', auth.user.id)
-        .eq('status', 'active')
-        .maybeSingle()
-
-      if (member?.role === 'org_admin') {
-        isAllowed = true
-      }
-    }
+    const isAllowed = await organizationService.checkIsOrgAdmin(
+      orgId,
+      auth.user.id,
+      auth.user.role,
+      org.created_by
+    )
 
     if (!isAllowed) {
       toast.error('You do not have permission to edit this organization.')
@@ -298,12 +284,7 @@ async function handleSave() {
       updatePayload.official_email_verified = false
     }
 
-    const { error: updateErr } = await supabase
-      .from('organizations')
-      .update(updatePayload)
-      .eq('id', orgId)
-
-    if (updateErr) throw updateErr
+    await organizationService.updateOrganization(orgId, updatePayload)
 
     // Refresh organization in store
     await orgStore.fetchOrganization(orgId)

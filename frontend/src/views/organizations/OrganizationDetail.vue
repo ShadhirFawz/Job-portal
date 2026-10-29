@@ -25,46 +25,20 @@ import {
   MoreVertical,
   ChevronRight,
 } from 'lucide-vue-next'
-import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationsStore } from '@/stores/organizations'
+import { organizationService } from '@/services/organization.service'
+import { memberService } from '@/services/member.service'
 import { getOrganizationImageUrl } from '@/composables/useOrganizationImage'
 import { getProfileImageUrl } from '@/composables/useProfileImage'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
-
-// ---------- Types ----------
-type MemberStatus = 'active' | 'pending' | 'revoked' | 'rejected'
-type MemberRole = 'org_admin' | 'org_staff'
-
-interface OrgMemberUser {
-  id: string
-  email: string
-  first_name: string | null
-  last_name: string | null
-  display_name: string | null
-  avatar_path: string | null
-}
-interface OrgMemberInviter {
-  id: string
-  email: string
-  display_name: string | null
-  first_name: string | null
-  last_name: string | null
-}
-interface OrgMember {
-  id: string
-  organization_id: string
-  user_id: string
-  role: MemberRole
-  status: MemberStatus
-  title: string | null
-  department: string | null
-  joined_at: string | null
-  invited_at: string | null
-  invited_by: string | null
-  user: OrgMemberUser | null
-  inviter: OrgMemberInviter | null
-}
+import MemberEditModal from '@/components/organizations/MemberEditModal.vue'
+import type {
+  OrgMember,
+  OrgMemberUser,
+  MemberRole,
+  MemberStatus,
+} from '@/types/member'
 
 // ---------- Setup ----------
 const route = useRoute()
@@ -96,10 +70,7 @@ watch(searchQuery, (q) => {
 
 // ---------- Edit modal ----------
 const editingMember = ref<OrgMember | null>(null)
-const editTitle = ref('')
-const editDepartment = ref('')
 const savingEdit = ref(false)
-const editModalEl = ref<HTMLElement | null>(null)
 
 // ---------- Confirm dialog ----------
 interface ConfirmState {
@@ -168,22 +139,12 @@ async function checkIfOrgAdmin(orgId: string) {
     isOrgAdmin.value = false
     return
   }
-  if (org.value && org.value.created_by === auth.user.id) {
-    isOrgAdmin.value = true
-    return
-  }
-  if (auth.user.role === 'super_admin') {
-    isOrgAdmin.value = true
-    return
-  }
-  const { data } = await supabase
-    .from('organization_members')
-    .select('role, status')
-    .eq('organization_id', orgId)
-    .eq('user_id', auth.user.id)
-    .eq('status', 'active')
-    .maybeSingle()
-  isOrgAdmin.value = data?.role === 'org_admin'
+  isOrgAdmin.value = await organizationService.checkIsOrgAdmin(
+    orgId,
+    auth.user.id,
+    auth.user.role,
+    org.value?.created_by
+  )
 }
 
 // ---------- Fetch ----------
@@ -192,48 +153,7 @@ async function fetchMembers(orgId: string) {
   loadingMembers.value = true
   membersError.value = ''
   try {
-    let { data, error } = await supabase
-      .from('organization_members')
-      .select(`
-        id, organization_id, user_id, role, status, title, department,
-        joined_at, invited_at, invited_by,
-        user:users!user_id ( id, email, first_name, last_name, display_name, avatar_path ),
-        inviter:users!invited_by ( id, email, display_name, first_name, last_name )
-      `)
-      .eq('organization_id', orgId)
-      .order('created_at', { ascending: true })
-
-    if (error) {
-      console.warn('FK embed query failed, falling back:', error)
-      const { data: rawMembers, error: rawError } = await supabase
-        .from('organization_members')
-        .select('*')
-        .eq('organization_id', orgId)
-        .order('created_at', { ascending: true })
-      if (rawError) throw rawError
-
-      if (rawMembers && rawMembers.length > 0) {
-        const userIds = [...new Set(rawMembers.map((m: any) => m.user_id).filter(Boolean))]
-        const inviterIds = [...new Set(rawMembers.map((m: any) => m.invited_by).filter(Boolean))]
-        const allIds = [...new Set([...userIds, ...inviterIds])]
-        let usersMap = new Map<string, any>()
-        if (allIds.length > 0) {
-          const { data: usersData } = await supabase
-            .from('users')
-            .select('id, email, first_name, last_name, display_name, avatar_path')
-            .in('id', allIds)
-          usersMap = new Map((usersData || []).map((u: any) => [u.id, u]))
-        }
-        data = rawMembers.map((m: any) => ({
-          ...m,
-          user: usersMap.get(m.user_id) || null,
-          inviter: usersMap.get(m.invited_by) || null,
-        }))
-      } else {
-        data = []
-      }
-    }
-    members.value = (data || []) as unknown as OrgMember[]
+    members.value = await memberService.fetchMembers(orgId)
   } catch (err: any) {
     console.error('Error fetching members:', err)
     membersError.value = err.message || 'Failed to load team members'
@@ -326,11 +246,7 @@ function humanizeStatus(s: string) {
 async function approveMember(member: OrgMember) {
   actionKey.value = `${member.id}:approve`
   try {
-    const { error } = await supabase
-      .from('organization_members')
-      .update({ status: 'active', joined_at: new Date().toISOString() })
-      .eq('id', member.id)
-    if (error) throw error
+    await memberService.acceptMember(member.id)
     toast.success(`${getMemberDisplayName(member)} activated`)
     await fetchMembers(route.params.id as string)
   } catch (err: any) {
@@ -354,15 +270,7 @@ async function revokeMember(member: OrgMember) {
 
   actionKey.value = `${member.id}:revoke`
   try {
-    const { error } = await supabase
-      .from('organization_members')
-      .update({
-        status: 'revoked',
-        revoked_at: new Date().toISOString(),
-        revoked_by: auth.user?.id,
-      })
-      .eq('id', member.id)
-    if (error) throw error
+    await memberService.revokeMember(member.id, auth.user?.id || '')
     toast.success(isPending ? 'Invitation cancelled' : 'Member removed')
     await fetchMembers(route.params.id as string)
   } catch (err: any) {
@@ -375,18 +283,7 @@ async function revokeMember(member: OrgMember) {
 async function reinviteMember(member: OrgMember) {
   actionKey.value = `${member.id}:reinvite`
   try {
-    const { error } = await supabase
-      .from('organization_members')
-      .update({
-        status: 'pending',
-        invited_at: new Date().toISOString(),
-        invited_by: auth.user?.id,
-        revoked_at: null,
-        revoked_by: null,
-        rejection_reason: null,
-      })
-      .eq('id', member.id)
-    if (error) throw error
+    await memberService.reinviteMember(member.id)
     toast.success('Re-invitation sent')
     await fetchMembers(route.params.id as string)
   } catch (err: any) {
@@ -407,8 +304,7 @@ async function deleteMemberRecord(member: OrgMember) {
 
   actionKey.value = `${member.id}:delete`
   try {
-    const { error } = await supabase.from('organization_members').delete().eq('id', member.id)
-    if (error) throw error
+    await memberService.deleteMemberRecord(member.id)
     toast.success('Record deleted')
     await fetchMembers(route.params.id as string)
   } catch (err: any) {
@@ -437,11 +333,7 @@ async function toggleRole(member: OrgMember) {
 
   actionKey.value = `${member.id}:role`
   try {
-    const { error } = await supabase
-      .from('organization_members')
-      .update({ role: newRole })
-      .eq('id', member.id)
-    if (error) throw error
+    await memberService.updateMemberRole(member.id, newRole)
     toast.success(`Role changed to ${roleName}`)
     await fetchMembers(route.params.id as string)
   } catch (err: any) {
@@ -454,29 +346,14 @@ async function toggleRole(member: OrgMember) {
 // ---------- Edit modal ----------
 function openEditModal(member: OrgMember) {
   editingMember.value = member
-  editTitle.value = member.title || ''
-  editDepartment.value = member.department || ''
-  document.body.style.overflow = 'hidden'
-  requestAnimationFrame(() => editModalEl.value?.focus())
 }
 function closeEditModal() {
   editingMember.value = null
-  editTitle.value = ''
-  editDepartment.value = ''
-  document.body.style.overflow = ''
 }
-async function saveMemberEdit() {
-  if (!editingMember.value) return
+async function onSaveMemberEdit(payload: { memberId: string; title: string; department: string }) {
   savingEdit.value = true
   try {
-    const { error } = await supabase
-      .from('organization_members')
-      .update({
-        title: editTitle.value.trim() || null,
-        department: editDepartment.value.trim() || null,
-      })
-      .eq('id', editingMember.value.id)
-    if (error) throw error
+    await memberService.updateMemberDetails(payload.memberId, payload.title, payload.department)
     toast.success('Member details updated')
     await fetchMembers(route.params.id as string)
     closeEditModal()
@@ -516,26 +393,11 @@ async function sendVerificationEmail() {
   sendingVerification.value = true
   verificationMessage.value = ''
   try {
-    const token = crypto.randomUUID() + '-' + crypto.randomUUID()
-    const expiresAt = new Date()
-    expiresAt.setHours(expiresAt.getHours() + 24)
-
-    await supabase
-      .from('organization_email_verifications')
-      .delete()
-      .eq('organization_id', org.value.id)
-      .is('verified_at', null)
-
-    const { error } = await supabase.from('organization_email_verifications').insert({
-      organization_id: org.value.id,
-      email: org.value.official_email,
-      token,
-      expires_at: expiresAt.toISOString(),
-      created_by: auth.user.id,
-    })
-    if (error) throw error
-
-    const verifyUrl = `${window.location.origin}/organizations/verify-email?token=${token}`
+    const { verifyUrl } = await organizationService.createEmailVerificationToken(
+      org.value.id,
+      org.value.official_email,
+      auth.user.id
+    )
     verificationMessage.value = `Verification link generated (valid 24h). Dev link: ${verifyUrl}`
     await navigator.clipboard.writeText(verifyUrl).catch(() => {})
     toast.success('Verification link copied to clipboard')
@@ -1266,94 +1128,13 @@ async function sendVerificationEmail() {
     </div>
   </div>
 
-    <!-- Edit modal -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition ease-out duration-150"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition ease-in duration-100"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div
-          v-if="editingMember"
-          class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="edit-modal-title"
-          @click.self="closeEditModal"
-          @keydown.esc="closeEditModal"
-        >
-          <form
-            @submit.prevent="saveMemberEdit"
-            ref="editModalEl"
-            tabindex="-1"
-            class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 focus:outline-none"
-          >
-            <div class="flex items-center justify-between border-b pb-3">
-              <h3 id="edit-modal-title" class="text-base font-bold text-gray-900">
-                Edit Team Member
-              </h3>
-              <button
-                type="button"
-                @click="closeEditModal"
-                class="p-1 text-gray-400 hover:text-gray-700 rounded"
-                aria-label="Close"
-              >
-                <X class="h-5 w-5" />
-              </button>
-            </div>
-
-            <p class="text-xs text-gray-500">
-              Updating details for <strong>{{ getMemberDisplayName(editingMember) }}</strong>
-            </p>
-
-            <div>
-              <label class="block text-xs font-semibold text-gray-700 uppercase mb-1">
-                Job Title / Position
-              </label>
-              <input
-                v-model="editTitle"
-                type="text"
-                placeholder="e.g. Senior Recruiter, HR Director"
-                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-gray-700 uppercase mb-1">
-                Department
-              </label>
-              <input
-                v-model="editDepartment"
-                type="text"
-                placeholder="e.g. Human Resources, Engineering"
-                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div class="flex justify-end gap-2 pt-3 border-t">
-              <button
-                type="button"
-                @click="closeEditModal"
-                class="px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-md"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                :disabled="savingEdit"
-                class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-md shadow-sm"
-              >
-                <Loader2 v-if="savingEdit" class="h-3 w-3 animate-spin" />
-                {{ savingEdit ? 'Saving…' : 'Save Changes' }}
-              </button>
-            </div>
-          </form>
-        </div>
-      </Transition>
-    </Teleport>
+    <!-- Edit member modal -->
+    <MemberEditModal
+      :member="editingMember"
+      :saving="savingEdit"
+      @close="closeEditModal"
+      @save="onSaveMemberEdit"
+    />
 
     <!-- Confirm dialog -->
     <ConfirmDialog

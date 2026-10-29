@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { supabase } from '@/lib/supabase'
+import { toast } from 'vue-sonner'
 import { useAuthStore } from '@/stores/auth'
+import { memberService } from '@/services/member.service'
+import { profileService } from '@/services/profile.service'
 import { getOrganizationImageUrl } from '@/composables/useOrganizationImage'
+import type { UserInvitationItem } from '@/types/member'
 
 const router = useRouter()
 const auth = useAuthStore()
 
-const invitations = ref<any[]>([])
+const invitations = ref<UserInvitationItem[]>([])
 const loading = ref(true)
 const actionLoading = ref<string | null>(null)
 
@@ -18,82 +21,46 @@ async function fetchInvitations() {
   if (!auth.user) return
   loading.value = true
 
-  const { data, error } = await supabase
-    .from('organization_members')
-    .select(`
-      id,
-      role,
-      status,
-      title,
-      invited_at,
-      organization:organizations (
-        id,
-        name,
-        tagline,
-        avatar_path,
-        industry,
-        city
-      )
-    `)
-    .eq('user_id', auth.user.id)
-    .eq('status', 'pending')
-    .order('invited_at', { ascending: false })
-
-  if (!error) {
-    invitations.value = data || []
+  try {
+    invitations.value = await memberService.fetchMyInvitations(auth.user.id)
+  } catch (err: any) {
+    console.error('Failed to load invitations:', err)
+    toast.error('Failed to load invitations')
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 }
 
-async function acceptInvitation(invitation: any) {
+async function acceptInvitation(invitation: UserInvitationItem) {
   actionLoading.value = invitation.id
   try {
-    const { error } = await supabase
-      .from('organization_members')
-      .update({
-        status: 'active',
-        joined_at: new Date().toISOString()
-      })
-      .eq('id', invitation.id)
+    await memberService.acceptInvitation(invitation.id)
 
-    if (error) throw error
-
-    // Optional: upgrade user role to org_staff if currently candidate
+    // Upgrade user role to org_staff if currently candidate
     if (auth.user?.role === 'candidate') {
-      await supabase
-        .from('users')
-        .update({ role: 'org_staff' })
-        .eq('id', auth.user.id)
+      await profileService.updateUserProfile(auth.user.id, { role: 'org_staff' } as any)
       await auth.fetchUserProfile()
     }
 
+    toast.success(`Joined ${invitation.organization.name}!`)
     await fetchInvitations()
-    // Optionally redirect to the organization
-    // router.push(`/organizations/${invitation.organization.id}`)
   } catch (err: any) {
-    alert(err.message)
+    toast.error(err.message || 'Failed to accept invitation')
   } finally {
     actionLoading.value = null
   }
 }
 
-async function declineInvitation(invitation: any) {
+async function declineInvitation(invitation: UserInvitationItem) {
   if (!confirm('Decline this invitation?')) return
 
   actionLoading.value = invitation.id
   try {
-    const { error } = await supabase
-      .from('organization_members')
-      .update({
-        status: 'rejected',
-        rejection_reason: 'Declined by user'
-      })
-      .eq('id', invitation.id)
-
-    if (error) throw error
+    await memberService.declineInvitation(invitation.id)
+    toast.success('Invitation declined')
     await fetchInvitations()
   } catch (err: any) {
-    alert(err.message)
+    toast.error(err.message || 'Failed to decline invitation')
   } finally {
     actionLoading.value = null
   }

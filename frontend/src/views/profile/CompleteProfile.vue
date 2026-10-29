@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { supabase } from '@/lib/supabase'
+import { profileService } from '@/services/profile.service'
 import { uploadProfileImage, deleteProfileImage, getProfileImageUrl } from '@/composables/useProfileImage'
 
 const router = useRouter()
@@ -103,9 +103,9 @@ async function handleSubmit() {
     let userEmail = auth.user?.email || auth.session?.user?.email
 
     if (!userId) {
-      const { data: sessionData } = await supabase.auth.getSession()
-      userId = sessionData.session?.user?.id
-      userEmail = sessionData.session?.user?.email
+      await auth.init()
+      userId = auth.user?.id || auth.session?.user?.id
+      userEmail = auth.user?.email || auth.session?.user?.email
     }
 
     if (!userId) {
@@ -151,11 +151,7 @@ async function handleSubmit() {
       updated_at: new Date().toISOString()
     }
 
-    const { error } = await supabase
-      .from('users')
-      .upsert(profilePayload, { onConflict: 'id' })
-
-    if (error) throw error
+    await profileService.updateUserProfile(userId, profilePayload)
 
     // 5. Refresh local user data in auth store
     await auth.fetchUserProfile()
