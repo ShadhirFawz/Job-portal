@@ -34,6 +34,17 @@ const router = createRouter({
       component: () => import('@/views/organizations/VerifyEmail.vue')
     },
     {
+      path: '/organizations/:orgId/jobs/create',
+      name: 'create-job',
+      component: () => import('@/views/jobs/CreateJob.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/jobs/:id',
+      name: 'job-detail',
+      component: () => import('@/views/jobs/JobDetail.vue')
+    },
+    {
       path: '/invitations',
       name: 'my-invitations',
       component: () => import('@/views/organizations/MyInvitations.vue'),

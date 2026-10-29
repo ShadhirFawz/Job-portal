@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
+import { useJobsStore } from '@/stores/jobs'
 import {
   Plus,
   RefreshCw,
@@ -60,6 +61,7 @@ const actionKey = ref<string | null>(null) // `${memberId}:${action}`
 const selectedFilter = ref<'all' | 'active' | 'pending' | 'revoked'>('all')
 const searchQuery = ref('')
 const debouncedQuery = ref('')
+const jobsStore = useJobsStore()
 
 // Debounce search
 let searchTimer: number | undefined
@@ -370,6 +372,10 @@ function switchTab(tab: TabKey) {
   if (tab === 'team' && members.value.length === 0) {
     fetchMembers((route.params.id as string) || org.value?.id || '')
   }
+
+  if (tab === 'jobs' && org.value) {
+  jobsStore.fetchOrganizationJobs(org.value.id)
+}
 }
 
 // ---------- Mobile actions menu ----------
@@ -420,7 +426,7 @@ async function sendVerificationEmail() {
     <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
       <!-- Cover Banner -->
       <div class="relative h-48 sm:h-64 rounded-3xl overflow-hidden shadow-sm">
-        <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600"></div>
+        <div class="absolute inset-0 bg-linear-to-r from-indigo-600 via-purple-600 to-fuchsia-600"></div>
         <!-- Watermark letter fallback when cover is not uploaded -->
         <div
           v-if="!org.cover_path"
@@ -437,7 +443,7 @@ async function sendVerificationEmail() {
           class="relative w-full h-full object-cover"
           alt=""
         />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent pointer-events-none"></div>
+        <div class="absolute inset-0 bg-linear-to-t from-black/40 via-black/10 to-transparent pointer-events-none"></div>
       </div>
 
       <!-- Header Card & Content Container -->
@@ -448,7 +454,7 @@ async function sendVerificationEmail() {
         >
           <!-- Organization Avatar -->
           <div
-            class="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl ring-4 ring-white bg-gradient-to-br from-indigo-600 to-purple-700 overflow-hidden shrink-0 shadow-md flex items-center justify-center"
+            class="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl ring-4 ring-white bg-linear-to-br from-indigo-600 to-purple-700 overflow-hidden shrink-0 shadow-md flex items-center justify-center"
           >
             <img
               v-if="org.avatar_path"
@@ -1064,8 +1070,74 @@ async function sendVerificationEmail() {
           role="tabpanel"
           class="bg-white rounded-2xl shadow-sm ring-1 ring-gray-200 p-6"
         >
-          <h2 class="text-lg font-semibold mb-2 text-gray-900">Job Postings</h2>
-          <p class="text-gray-600">Job management will be implemented in the next module.</p>
+          <div class="space-y-6">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg font-semibold text-gray-900">Job Postings</h2>
+              <button
+                v-if="isOrgAdmin"
+                @click="$router.push(`/organizations/${org.id}/jobs/create`)"
+                class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                + Create Job
+              </button>
+            </div>
+
+            <div v-if="jobsStore.loading" class="text-center py-10 text-gray-500">Loading jobs...</div>
+
+            <div v-else-if="jobsStore.organizationJobs.length === 0" class="bg-white rounded-lg shadow p-10 text-center">
+              <p class="text-gray-500">No jobs posted yet.</p>
+              <button
+                v-if="isOrgAdmin"
+                @click="$router.push(`/organizations/${org.id}/jobs/create`)"
+                class="mt-4 text-indigo-600 hover:underline text-sm"
+              >
+                Create your first job
+              </button>
+            </div>
+
+            <div v-else class="bg-white rounded-lg shadow overflow-hidden">
+              <ul class="divide-y divide-gray-200">
+                <li
+                  v-for="job in jobsStore.organizationJobs"
+                  :key="job.id"
+                  class="p-5 hover:bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div>
+                    <h3 class="font-medium text-gray-900">{{ job.title }}</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">
+                      {{ job.job_type.replace('_', ' ') }} • {{ job.work_mode }}
+                      <span v-if="job.city"> • {{ job.city }}</span>
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1">
+                      {{ job.applications_count }} applications
+                      <span v-if="job.selection_processes?.length">
+                        • {{ job.selection_processes.length }} selection stage(s)
+                      </span>
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span
+                      class="px-2.5 py-1 text-xs font-medium rounded-full capitalize"
+                      :class="{
+                        'bg-green-100 text-green-800': job.status === 'published',
+                        'bg-gray-100 text-gray-800': job.status === 'draft',
+                        'bg-yellow-100 text-yellow-800': job.status === 'paused',
+                        'bg-red-100 text-red-800': job.status === 'closed'
+                      }"
+                    >
+                      {{ job.status }}
+                    </span>
+                    <button
+                      @click="$router.push(`/jobs/${job.id}`)"
+                      class="text-sm text-indigo-600 hover:underline"
+                    >
+                      View
+                    </button>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
         </section>
 
         <!-- SETTINGS -->
