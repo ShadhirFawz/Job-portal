@@ -5,32 +5,67 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      path: '/organizations/create',
+      name: 'create-organization',
+      component: () => import('@/views/organizations/CreateOrganization.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/organizations/:id',
+      name: 'organization-detail',
+      component: () => import('@/views/organizations/OrganizationDetail.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/organizations/:id/edit',
+      name: 'edit-organization',
+      component: () => import('@/views/organizations/EditOrganization.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/organizations/:id/invite',
+      name: 'invite-member',
+      component: () => import('@/views/organizations/InviteMember.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/organizations/verify-email',
+      name: 'verify-organization-email',
+      component: () => import('@/views/organizations/VerifyEmail.vue')
+    },
+    {
+      path: '/invitations',
+      name: 'my-invitations',
+      component: () => import('@/views/organizations/MyInvitations.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/login',
       name: 'login',
-      component: () => import('@/pages/auth/Login.vue'),
+      component: () => import('@/views/auth/Login.vue'),
       meta: { guest: true }
     },
     {
       path: '/register',
       name: 'register',
-      component: () => import('@/pages/auth/Register.vue'),
+      component: () => import('@/views/auth/Register.vue'),
       meta: { guest: true }
     },
     {
       path: '/auth/callback',
       name: 'auth-callback',
-      component: () => import('@/pages/auth/Callback.vue')
+      component: () => import('@/views/auth/Callback.vue')
     },
     {
       path: '/profile/complete',
       name: 'profile-complete',
-      component: () => import('@/pages/profile/CompleteProfile.vue'),
+      component: () => import('@/views/profile/CompleteProfile.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: '/',
       name: 'home',
-      component: () => import('@/pages/Home.vue'),
+      component: () => import('@/views/Home.vue'),
       meta: { requiresAuth: true }
     },
     {

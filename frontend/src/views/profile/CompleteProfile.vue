@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { supabase } from '@/lib/supabase'
-import { uploadProfileImage, getPublicUrl } from '@/composables/useProfileImage'
+import { uploadProfileImage, deleteProfileImage, getProfileImageUrl } from '@/composables/useProfileImage'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -31,11 +31,11 @@ const avatarPreview = ref<string | null>(null)
 const coverPreview = ref<string | null>(null)
 
 const coverUrl = computed(() => {
-  return coverPreview.value || (auth.user?.cover_path ? getPublicUrl(auth.user.cover_path) : undefined)
+  return coverPreview.value || (auth.user?.cover_path ? getProfileImageUrl(auth.user.cover_path) : undefined)
 })
 
 const avatarUrl = computed(() => {
-  return avatarPreview.value || (auth.user?.avatar_path ? getPublicUrl(auth.user.avatar_path) : undefined)
+  return avatarPreview.value || (auth.user?.avatar_path ? getProfileImageUrl(auth.user.avatar_path) : undefined)
 })
 
 function populateFields(user: any) {
@@ -115,15 +115,17 @@ async function handleSubmit() {
     let avatarPath = auth.user?.avatar_path || null
     let coverPath = auth.user?.cover_path || null
 
-    // 2. Upload avatar
+    // 2. Upload avatar (delete old file first to avoid stale accumulation)
     if (avatarFile.value) {
+      await deleteProfileImage(avatarPath)
       const path = await uploadProfileImage(userId, avatarFile.value, 'avatar')
       if (!path) throw new Error('Failed to upload avatar. Please verify storage permissions.')
       avatarPath = path
     }
 
-    // 3. Upload cover
+    // 3. Upload cover (delete old file first to avoid stale accumulation)
     if (coverFile.value) {
+      await deleteProfileImage(coverPath)
       const path = await uploadProfileImage(userId, coverFile.value, 'cover')
       if (!path) throw new Error('Failed to upload cover. Please verify storage permissions.')
       coverPath = path
@@ -254,7 +256,7 @@ async function handleSubmit() {
           <div>
             <label class="block text-sm font-medium text-gray-700">Professional Headline</label>
             <input v-model="headline" type="text" placeholder="e.g. Full Stack Developer | Open to opportunities"
-              class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+              class="mt-1 block border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
