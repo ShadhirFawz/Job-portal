@@ -29,6 +29,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationsStore } from '@/stores/organizations'
 import { getOrganizationImageUrl } from '@/composables/useOrganizationImage'
+import { getProfileImageUrl } from '@/composables/useProfileImage'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 // ---------- Types ----------
@@ -301,6 +302,13 @@ function getMemberDisplayName(member: OrgMember) {
   return 'Registered User'
 }
 
+function getUserInitial(user: OrgMemberUser | null | undefined): string {
+  if (user?.first_name?.trim()) return user.first_name.trim().charAt(0).toUpperCase()
+  if (user?.display_name?.trim()) return user.display_name.trim().charAt(0).toUpperCase()
+  if (user?.email?.trim()) return user.email.trim().charAt(0).toUpperCase()
+  return 'U'
+}
+
 function formatDate(isoString: string | null) {
   if (!isoString) return ''
   return new Date(isoString).toLocaleDateString(undefined, {
@@ -547,78 +555,102 @@ async function sendVerificationEmail() {
   </div>
 
   <div v-else-if="org" class="min-h-screen bg-gray-50 pb-16">
-    <!-- Cover -->
-    <div class="relative h-48 sm:h-56 overflow-hidden">
-      <div class="absolute inset-0 bg-linear-to-r from-indigo-500 via-purple-500 to-fuchsia-600"></div>
-      <img
-        v-if="org.cover_path"
-        :src="getOrganizationImageUrl(org.cover_path) || ''"
-        class="relative w-full h-full object-cover"
-        alt=""
-      />
-      <div class="absolute inset-0 bg-linear-to-t from-black/20 to-transparent"></div>
-    </div>
-
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 -mt-16">
-      <!-- Header Card -->
-      <div
-        class="bg-white rounded-2xl shadow-lg ring-1 ring-gray-200 p-6 flex flex-col sm:flex-row items-start gap-6"
-      >
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+      <!-- Cover Banner -->
+      <div class="relative h-48 sm:h-64 rounded-3xl overflow-hidden shadow-sm">
+        <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600"></div>
+        <!-- Watermark letter fallback when cover is not uploaded -->
         <div
-          class="h-24 w-24 rounded-2xl ring-4 ring-white bg-gray-200 overflow-hidden shrink-0 shadow-md"
+          v-if="!org.cover_path"
+          class="absolute inset-0 flex items-center justify-end pr-8 sm:pr-16 pointer-events-none select-none opacity-20 overflow-hidden"
+          aria-hidden="true"
         >
-          <img
-            v-if="org.avatar_path"
-            :src="getOrganizationImageUrl(org.avatar_path) || ''"
-            class="h-full w-full object-cover"
-            :alt="org.name"
-          />
-          <div v-else class="flex h-full w-full items-center justify-center text-gray-400">
-            <BuildingIcon class="h-10 w-10" />
-          </div>
+          <span class="text-9xl sm:text-[14rem] font-black text-white tracking-widest uppercase">
+            {{ (org.name || 'O').charAt(0) }}
+          </span>
         </div>
+        <img
+          v-if="org.cover_path"
+          :src="getOrganizationImageUrl(org.cover_path) || ''"
+          class="relative w-full h-full object-cover"
+          alt=""
+        />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent pointer-events-none"></div>
+      </div>
 
-        <div class="flex-1 min-w-0">
-          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <div>
-              <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 truncate">{{ org.name }}</h1>
-              <p v-if="org.tagline" class="text-gray-600 mt-1">{{ org.tagline }}</p>
-              <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-gray-500">
-                <span v-if="org.industry" class="inline-flex items-center gap-1">
-                  <Briefcase class="h-3.5 w-3.5" /> {{ org.industry }}
-                </span>
-                <span v-if="org.company_size" class="inline-flex items-center gap-1">
-                  <Users class="h-3.5 w-3.5" /> {{ org.company_size }} employees
-                </span>
-                <span v-if="org.city" class="inline-flex items-center gap-1">
-                  <MapPin class="h-3.5 w-3.5" /> {{ org.city }}
-                </span>
-                <a
-                  v-if="org.website_url"
-                  :href="org.website_url"
-                  target="_blank"
-                  rel="noopener"
-                  class="inline-flex items-center gap-1 text-indigo-600 hover:underline"
+      <!-- Header Card & Content Container -->
+      <div class="relative z-10 -mt-14 sm:-mt-16 px-2 sm:px-4">
+        <!-- Header Card -->
+        <div
+          class="bg-white rounded-2xl shadow-lg ring-1 ring-gray-200/80 p-6 flex flex-col sm:flex-row items-start gap-6"
+        >
+          <!-- Organization Avatar -->
+          <div
+            class="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl ring-4 ring-white bg-gradient-to-br from-indigo-600 to-purple-700 overflow-hidden shrink-0 shadow-md flex items-center justify-center"
+          >
+            <img
+              v-if="org.avatar_path"
+              :src="getOrganizationImageUrl(org.avatar_path) || ''"
+              class="h-full w-full object-cover"
+              :alt="org.name"
+            />
+            <div v-else class="flex h-full w-full items-center justify-center font-bold text-3xl sm:text-4xl text-white select-none">
+              {{ (org.name || 'O').charAt(0).toUpperCase() }}
+            </div>
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+              <div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 truncate">{{ org.name }}</h1>
+                <p v-if="org.tagline" class="text-gray-600 mt-1">{{ org.tagline }}</p>
+                <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-gray-500">
+                  <span v-if="org.industry" class="inline-flex items-center gap-1">
+                    <Briefcase class="h-3.5 w-3.5" /> {{ org.industry }}
+                  </span>
+                  <span v-if="org.company_size" class="inline-flex items-center gap-1">
+                    <Users class="h-3.5 w-3.5" /> {{ org.company_size }} employees
+                  </span>
+                  <span v-if="org.city" class="inline-flex items-center gap-1">
+                    <MapPin class="h-3.5 w-3.5" /> {{ org.city }}
+                  </span>
+                  <a
+                    v-if="org.website_url"
+                    :href="org.website_url"
+                    target="_blank"
+                    rel="noopener"
+                    class="inline-flex items-center gap-1 text-indigo-600 hover:underline"
+                  >
+                    <Globe class="h-3.5 w-3.5" /> Website
+                  </a>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2.5 sm:self-start">
+                <span
+                  class="px-3 py-1 text-xs font-semibold rounded-full capitalize"
+                  :class="{
+                    'bg-green-100 text-green-800': org.status === 'active',
+                    'bg-yellow-100 text-yellow-800': org.status === 'pending_verification',
+                    'bg-red-100 text-red-800':
+                      org.status === 'suspended' || org.status === 'rejected',
+                  }"
                 >
-                  <Globe class="h-3.5 w-3.5" /> Website
-                </a>
+                  {{ humanizeStatus(org.status) }}
+                </span>
+
+                <router-link
+                  v-if="isOrgAdmin"
+                  :to="`/organizations/${org.id}/edit`"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 shadow-xs transition-colors"
+                >
+                  <Pencil class="h-3.5 w-3.5 text-gray-500" />
+                  Edit Company
+                </router-link>
               </div>
             </div>
-
-            <span
-              class="self-start px-3 py-1 text-xs font-semibold rounded-full capitalize"
-              :class="{
-                'bg-green-100 text-green-800': org.status === 'active',
-                'bg-yellow-100 text-yellow-800': org.status === 'pending_verification',
-                'bg-red-100 text-red-800':
-                  org.status === 'suspended' || org.status === 'rejected',
-              }"
-            >
-              {{ humanizeStatus(org.status) }}
-            </span>
           </div>
         </div>
-      </div>
 
       <!-- Tabs -->
       <div class="mt-6 border-b border-gray-200">
@@ -904,11 +936,11 @@ async function sendVerificationEmail() {
                     >
                       <img
                         v-if="member.user?.avatar_path"
-                        :src="getOrganizationImageUrl(member.user.avatar_path) || ''"
+                        :src="getProfileImageUrl(member.user.avatar_path) || ''"
                         class="h-full w-full object-cover"
                         :alt="getMemberDisplayName(member)"
                       />
-                      <span v-else>{{ getMemberDisplayName(member).charAt(0).toUpperCase() }}</span>
+                      <span v-else>{{ getUserInitial(member.user) }}</span>
                     </div>
 
                     <div class="min-w-0">
@@ -1213,12 +1245,26 @@ async function sendVerificationEmail() {
             </div>
           </div>
 
-          <div class="text-sm text-gray-500">
-            More settings (edit profile, danger zone, etc.) coming soon.
+          <!-- Organization Profile Edit Section -->
+          <div v-if="isOrgAdmin" class="border border-gray-200 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="font-medium text-gray-900">Organization Profile Details</h3>
+              <p class="text-sm text-gray-600 mt-1">
+                Update your company's name, logos, tagline, about, contact info, office locations, and social presence.
+              </p>
+            </div>
+            <router-link
+              :to="`/organizations/${org.id}/edit`"
+              class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 shadow-xs transition-colors whitespace-nowrap"
+            >
+              <Pencil class="h-4 w-4" />
+              Edit Organization
+            </router-link>
           </div>
         </section>
       </div>
     </div>
+  </div>
 
     <!-- Edit modal -->
     <Teleport to="body">

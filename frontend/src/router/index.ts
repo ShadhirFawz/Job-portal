@@ -17,6 +17,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/organizations/:id/edit',
+      name: 'edit-organization',
+      component: () => import('@/views/organizations/EditOrganization.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/organizations/:id/invite',
       name: 'invite-member',
       component: () => import('@/views/organizations/InviteMember.vue'),
