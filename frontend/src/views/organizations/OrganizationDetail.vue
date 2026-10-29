@@ -32,6 +32,7 @@ import { organizationService } from '@/services/organization.service'
 import { memberService } from '@/services/member.service'
 import { getOrganizationImageUrl } from '@/composables/useOrganizationImage'
 import { getProfileImageUrl } from '@/composables/useProfileImage'
+import { formatJobDate } from '@/utils/date'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import MemberEditModal from '@/components/organizations/MemberEditModal.vue'
 import type {
@@ -1108,9 +1109,12 @@ async function sendVerificationEmail() {
                       {{ job.job_type.replace('_', ' ') }} • {{ job.work_mode }}
                       <span v-if="job.city"> • {{ job.city }}</span>
                     </p>
-                    <p class="text-xs text-gray-400 mt-1">
-                      {{ job.applications_count }} applications
-                      <span v-if="job.selection_processes?.length">
+                    <p class="text-xs text-gray-400 mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span class="font-medium text-gray-500">{{ formatJobDate(job.created_at, job.updated_at) }}</span>
+                      <span>•</span>
+                      <span>{{ job.applications_count }} applications</span>
+                      <span v-if="job.has_custom_hiring_process">• Custom hiring</span>
+                      <span v-else-if="job.selection_processes?.length">
                         • {{ job.selection_processes.length }} selection stage(s)
                       </span>
                     </p>
