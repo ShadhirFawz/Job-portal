@@ -31,6 +31,8 @@ const editDepartment = ref('')
 const savingEdit = ref(false)
 
 const org = computed(() => orgStore.currentOrganization)
+const sendingVerification = ref(false)
+const verificationMessage = ref('')
 
 // Sync tab changes to URL query param
 watch(activeTab, (newTab) => {
@@ -405,6 +407,55 @@ function formatDate(isoString: string | null) {
     month: 'short',
     day: 'numeric'
   })
+}
+
+async function sendVerificationEmail() {
+  if (!org.value || !auth.user) return
+
+  sendingVerification.value = true
+  verificationMessage.value = ''
+
+  try {
+    // Generate a secure token
+    const token = crypto.randomUUID() + '-' + crypto.randomUUID()
+    const expiresAt = new Date()
+    expiresAt.setHours(expiresAt.getHours() + 24) // 24 hours validity
+
+    // Invalidate previous unused tokens for this org
+    await supabase
+      .from('organization_email_verifications')
+      .delete()
+      .eq('organization_id', org.value.id)
+      .is('verified_at', null)
+
+    // Create new token
+    const { error } = await supabase
+      .from('organization_email_verifications')
+      .insert({
+        organization_id: org.value.id,
+        email: org.value.official_email,
+        token,
+        expires_at: expiresAt.toISOString(),
+        created_by: auth.user.id
+      })
+
+    if (error) throw error
+
+    // In production you would send a real email here.
+    // For now we show the verification link (development convenience)
+    const verifyUrl = `${window.location.origin}/organizations/verify-email?token=${token}`
+    
+    verificationMessage.value = `Verification link generated (valid 24h). For development, open this link: ${verifyUrl}`
+    
+    // Optional: copy to clipboard
+    await navigator.clipboard.writeText(verifyUrl)
+    alert('Verification link copied to clipboard (development mode)')
+
+  } catch (err: any) {
+    verificationMessage.value = err.message || 'Failed to generate verification'
+  } finally {
+    sendingVerification.value = false
+  }
 }
 </script>
 
@@ -925,19 +976,25 @@ function formatDate(isoString: string | null) {
               <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
               </svg>
-              Email verified
+              <span class="font-medium text-sm">Official email verified</span>
             </div>
 
-            <div v-else class="mt-4">
-              <p class="text-sm text-yellow-700 mb-3">
+            <div v-else class="mt-4 space-y-3">
+              <p class="text-sm text-yellow-700">
                 This email is not yet verified. Verification is required before you can post jobs.
               </p>
+
               <button
-                class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm"
+                :disabled="sendingVerification"
+                class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
                 @click="sendVerificationEmail"
               >
-                Send Verification Email
+                {{ sendingVerification ? 'Generating...' : 'Send Verification Email' }}
               </button>
+
+              <p v-if="verificationMessage" class="text-xs text-gray-600 break-all">
+                {{ verificationMessage }}
+              </p>
             </div>
           </div>
 
@@ -1014,7 +1071,5 @@ function formatDate(isoString: string | null) {
 </template>
 
 <script lang="ts">
-async function sendVerificationEmail() {
-  alert('Verification email feature will be fully implemented next. For development you can manually set official_email_verified = true in the database.')
-}
+
 </script>
