@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { organizationService } from '@/services/organization.service'
 import { profileService } from '@/services/profile.service'
 import { uploadOrganizationImage } from '@/composables/useOrganizationImage'
+import { Camera, Building, Globe, Phone, MapPin, Sparkles, Building2 } from 'lucide-vue-next'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -114,148 +115,169 @@ async function handleCreate() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 py-10 px-4">
-    <div class="max-w-3xl mx-auto">
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Create a Company</h1>
-        <p class="mt-2 text-gray-600">
+  <div class="min-h-screen bg-page py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
+    <div class="max-w-3xl mx-auto space-y-6">
+      
+      <!-- Header section -->
+      <div class="mb-4 sm:mb-6">
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-text-strong tracking-tight">
+          Create a Company
+        </h1>
+        <p class="mt-1.5 text-xs sm:text-sm lg:text-base text-text-secondary leading-relaxed">
           Set up your organization profile to start posting jobs and managing recruitment.
         </p>
       </div>
 
-      <form @submit.prevent="handleCreate" class="bg-white shadow rounded-lg overflow-hidden">
-        <!-- Cover + Avatar -->
-        <div class="h-40 bg-gradient-to-r from-indigo-500 to-purple-600 relative">
-          <img v-if="coverPreview" :src="coverPreview" class="w-full h-full object-cover" />
-          <label class="absolute bottom-3 right-3 bg-white/90 hover:bg-white text-xs px-3 py-1.5 rounded cursor-pointer shadow">
+      <form @submit.prevent="handleCreate" class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl overflow-hidden space-y-6">
+        
+        <!-- Cover + Avatar Upload Area -->
+        <div class="h-36 sm:h-44 bg-gradient-to-r from-brand-from via-brand-via to-brand-to relative">
+          <img v-if="coverPreview" :src="coverPreview" class="w-full h-full object-cover" alt="Cover preview" />
+          <label class="absolute bottom-3 right-3 bg-card/90 backdrop-blur-xs text-text-secondary hover:text-text-strong hover:bg-card text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer shadow-sm border border-border transition">
             Upload Cover
             <input type="file" accept="image/*" class="hidden" @change="onCoverChange" />
           </label>
         </div>
 
-        <div class="px-6 -mt-10 flex items-end gap-4">
+        <div class="px-4 sm:px-8 -mt-10 sm:-mt-12 flex items-end gap-4 relative z-10">
           <div class="relative">
-            <div class="h-20 w-20 rounded-full ring-4 ring-white bg-gray-200 overflow-hidden">
-              <img v-if="avatarPreview" :src="avatarPreview" class="h-full w-full object-cover" />
+            <div class="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl ring-4 ring-card bg-primary text-white overflow-hidden flex items-center justify-center shadow-md font-bold text-xl sm:text-2xl">
+              <img v-if="avatarPreview" :src="avatarPreview" class="h-full w-full object-cover" alt="Avatar preview" />
+              <span v-else>{{ (name || 'C').charAt(0).toUpperCase() }}</span>
             </div>
-            <label class="absolute bottom-0 right-0 bg-indigo-600 text-white p-1 rounded-full cursor-pointer">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-              </svg>
+            <label class="absolute bottom-0 right-0 translate-x-1 translate-y-1 bg-primary hover:bg-primary-hover text-white p-2 rounded-full cursor-pointer shadow-md transition">
+              <Camera class="h-3.5 w-3.5" />
               <input type="file" accept="image/*" class="hidden" @change="onAvatarChange" />
             </label>
           </div>
         </div>
 
-        <div class="px-6 py-8 space-y-6">
-          <div v-if="errorMsg" class="rounded-md bg-red-50 p-4 text-sm text-red-700">
+        <div class="px-4 sm:px-8 pb-8 space-y-6 sm:space-y-8">
+          
+          <!-- Error alert -->
+          <div v-if="errorMsg" class="alert alert-error p-4 text-xs sm:text-sm">
             {{ errorMsg }}
           </div>
 
-          <!-- Basic Info -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div class="sm:col-span-2">
-              <label class="block text-sm font-medium text-gray-700">Company Name *</label>
-              <input v-model="name" required type="text"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-            </div>
+          <!-- Basic Info Section -->
+          <div class="space-y-4">
+            <h2 class="text-base sm:text-lg font-semibold text-text-strong flex items-center gap-2 border-b border-border pb-3">
+              Basic Information
+            </h2>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Legal Name</label>
-              <input v-model="legalName" type="text"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div class="sm:col-span-2">
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">
+                  Company Name <span class="text-danger">*</span>
+                </label>
+                <input v-model="name" required type="text" placeholder="e.g. Acme Corporation" />
+              </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Official Company Email *</label>
-              <input v-model="officialEmail" required type="email"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-              <p class="mt-1 text-xs text-gray-500">Must be a company domain email. Verification required.</p>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Tagline</label>
-            <input v-model="tagline" type="text" placeholder="Short one-liner about your company"
-              class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Description</label>
-            <textarea v-model="description" rows="4"
-              class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
-          </div>
-
-          <!-- Extra Details -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Industry</label>
-              <input v-model="industry" type="text"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Company Size</label>
-              <select v-model="companySize"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                <option value="">Select</option>
-                <option value="1-10">1-10</option>
-                <option value="11-50">11-50</option>
-                <option value="51-200">51-200</option>
-                <option value="201-500">201-500</option>
-                <option value="501-1000">501-1000</option>
-                <option value="1000+">1000+</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Founded Year</label>
-              <input v-model.number="foundedYear" type="number" min="1800" max="2026"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-            </div>
-          </div>
-
-          <!-- Contact -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Website</label>
-              <input v-model="websiteUrl" type="url"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Phone</label>
-              <input v-model="phone" type="tel"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
-            </div>
-          </div>
-
-          <!-- Location -->
-          <div class="border-t pt-6">
-            <div class="flex items-center gap-2 mb-4">
-              <input id="hasOffice" v-model="hasPhysicalOffice" type="checkbox" class="rounded border-gray-300" />
-              <label for="hasOffice" class="text-sm font-medium text-gray-700">This company has a physical office</label>
-            </div>
-
-            <div v-if="hasPhysicalOffice" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label class="block text-sm font-medium text-gray-700">Country Code</label>
-                <input v-model="countryCode" type="text" maxlength="2" placeholder="IN"
-                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Legal Name</label>
+                <input v-model="legalName" type="text" placeholder="e.g. Acme Corp Inc." />
+              </div>
+
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">
+                  Official Company Email <span class="text-danger">*</span>
+                </label>
+                <input v-model="officialEmail" required type="email" placeholder="hr@acme.com" />
+                <p class="mt-1 text-[11px] sm:text-xs text-text-muted">Must be a company domain email. Verification required.</p>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Tagline</label>
+              <input v-model="tagline" type="text" placeholder="Short one-liner about your company mission" />
+            </div>
+
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Description</label>
+              <textarea v-model="description" rows="4" placeholder="Tell candidates about your culture, tech stack, and what makes your company unique..."></textarea>
+            </div>
+          </div>
+
+          <!-- Extra Details Section -->
+          <div class="space-y-4 pt-2">
+            <h2 class="text-base sm:text-lg font-semibold text-text-strong flex items-center gap-2 border-b border-border pb-3">
+              <Building2 class="h-5 w-5 text-primary" /> Company Details
+            </h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Industry</label>
+                <input v-model="industry" type="text" placeholder="e.g. Fintech, SaaS" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700">City</label>
-                <input v-model="city" type="text"
-                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Company Size</label>
+                <select v-model="companySize">
+                  <option value="">Select Size</option>
+                  <option value="1-10">1-10</option>
+                  <option value="11-50">11-50</option>
+                  <option value="51-200">51-200</option>
+                  <option value="201-500">201-500</option>
+                  <option value="501-1000">501-1000</option>
+                  <option value="1000+">1000+</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Founded Year</label>
+                <input v-model.number="foundedYear" type="number" min="1800" max="2026" placeholder="2020" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact Section -->
+          <div class="space-y-4 pt-2">
+            <h2 class="text-base sm:text-lg font-semibold text-text-strong flex items-center gap-2 border-b border-border pb-3">
+              <Globe class="h-5 w-5 text-primary" /> Online Presence & Contact
+            </h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Website</label>
+                <input v-model="websiteUrl" type="url" placeholder="https://example.com" />
+              </div>
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Phone</label>
+                <input v-model="phone" type="tel" placeholder="+1 (555) 000-0000" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Location Section -->
+          <div class="space-y-4 pt-2 border-t border-border">
+            <div class="flex items-center gap-2.5 pt-4">
+              <input id="hasOffice" v-model="hasPhysicalOffice" type="checkbox" class="h-4.5 w-4.5 rounded border-border" />
+              <label for="hasOffice" class="text-xs sm:text-sm font-medium text-text-strong cursor-pointer mb-0">
+                This company has a physical office location
+              </label>
+            </div>
+
+            <div v-if="hasPhysicalOffice" class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 pt-2">
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Country Code</label>
+                <input v-model="countryCode" type="text" maxlength="2" placeholder="US" class="uppercase" />
+              </div>
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">City</label>
+                <input v-model="city" type="text" placeholder="San Francisco" />
               </div>
               <div class="sm:col-span-2">
-                <label class="block text-sm font-medium text-gray-700">Address</label>
-                <input v-model="addressLine1" type="text"
-                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Address</label>
+                <input v-model="addressLine1" type="text" placeholder="123 Innovation Drive, Suite 100" />
               </div>
             </div>
           </div>
 
+          <!-- Submit Button Action -->
           <div class="pt-4">
-            <button type="submit" :disabled="loading"
-              class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
+            <button
+              type="submit"
+              :disabled="loading"
+              class="w-full btn btn-primary py-3 text-xs sm:text-sm font-semibold rounded-xl shadow-sm transition"
+            >
               {{ loading ? 'Creating Company...' : 'Create Company' }}
             </button>
           </div>

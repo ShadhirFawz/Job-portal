@@ -89,7 +89,6 @@ async function handleSubmit() {
   errorMsg.value = ''
   successMsg.value = ''
 
-  // Validate required fields
   if (!firstName.value.trim() || !lastName.value.trim()) {
     errorMsg.value = 'Please enter both your first name and last name.'
     return
@@ -98,7 +97,6 @@ async function handleSubmit() {
   loading.value = true
 
   try {
-    // 1. Resolve user ID from Pinia store, session, or direct Supabase call
     let userId = auth.user?.id || auth.session?.user?.id
     let userEmail = auth.user?.email || auth.session?.user?.email
 
@@ -115,7 +113,6 @@ async function handleSubmit() {
     let avatarPath = auth.user?.avatar_path || null
     let coverPath = auth.user?.cover_path || null
 
-    // 2. Upload avatar (delete old file first to avoid stale accumulation)
     if (avatarFile.value) {
       await deleteProfileImage(avatarPath)
       const path = await uploadProfileImage(userId, avatarFile.value, 'avatar')
@@ -123,7 +120,6 @@ async function handleSubmit() {
       avatarPath = path
     }
 
-    // 3. Upload cover (delete old file first to avoid stale accumulation)
     if (coverFile.value) {
       await deleteProfileImage(coverPath)
       const path = await uploadProfileImage(userId, coverFile.value, 'cover')
@@ -131,7 +127,6 @@ async function handleSubmit() {
       coverPath = path
     }
 
-    // 4. Upsert user profile
     const profilePayload = {
       id: userId,
       email: userEmail || '',
@@ -152,13 +147,10 @@ async function handleSubmit() {
     }
 
     await profileService.updateUserProfile(userId, profilePayload)
-
-    // 5. Refresh local user data in auth store
     await auth.fetchUserProfile()
 
     successMsg.value = 'Profile completed successfully! Redirecting...'
-    
-    // Redirect after short delay
+
     setTimeout(() => {
       router.push('/')
     }, 1000)
@@ -173,17 +165,17 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+  <div class="min-h-screen bg-page py-10 px-4 sm:px-6 lg:px-8">
     <div class="max-w-3xl mx-auto">
-      <div class="bg-white shadow rounded-lg overflow-hidden">
+      <div class="bg-card border border-border shadow rounded-lg overflow-hidden">
         <!-- Cover Preview -->
-        <div class="h-48 bg-gradient-to-r from-indigo-500 to-purple-600 relative">
+        <div class="h-48 bg-gradient-to-r from-indigo-700 via-indigo-800 to-slate-900 relative">
           <img
             v-if="coverUrl"
             :src="coverUrl"
             class="w-full h-full object-cover"
           />
-          <label class="absolute bottom-4 right-4 bg-white/90 hover:bg-white text-sm px-3 py-1.5 rounded cursor-pointer shadow">
+          <label class="absolute bottom-4 right-4 bg-card/90 hover:bg-card text-text-strong text-sm px-3 py-1.5 rounded cursor-pointer shadow border border-border transition">
             Change Cover
             <input type="file" accept="image/*" class="hidden" @change="onCoverChange" />
           </label>
@@ -192,17 +184,17 @@ async function handleSubmit() {
         <!-- Avatar -->
         <div class="px-6 -mt-12 flex items-end space-x-5">
           <div class="relative">
-            <div class="h-24 w-24 rounded-full ring-4 ring-white bg-gray-200 overflow-hidden">
+            <div class="h-24 w-24 rounded-full ring-4 ring-card bg-primary text-white overflow-hidden flex items-center justify-center">
               <img
                 v-if="avatarUrl"
                 :src="avatarUrl"
                 class="h-full w-full object-cover"
               />
-              <div v-else class="h-full w-full flex items-center justify-center text-gray-400 text-2xl">
-                {{ firstName.charAt(0) || '?' }}
+              <div v-else class="h-full w-full flex items-center justify-center font-bold text-2xl text-white uppercase select-none">
+                {{ firstName.charAt(0) || (auth.user?.email || 'U').charAt(0) }}
               </div>
             </div>
-            <label class="absolute bottom-0 right-0 bg-indigo-600 text-white p-1.5 rounded-full cursor-pointer shadow">
+            <label class="absolute bottom-0 right-0 bg-primary hover:bg-primary-hover text-white p-1.5 rounded-full cursor-pointer shadow transition">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
               </svg>
@@ -210,98 +202,96 @@ async function handleSubmit() {
             </label>
           </div>
           <div class="pb-2">
-            <h1 class="text-2xl font-bold text-gray-900">Complete your profile</h1>
-            <p class="text-sm text-gray-500">This information will be visible to companies</p>
+            <h1 class="text-2xl font-bold text-text-strong">Complete your profile</h1>
+            <p class="text-sm text-text-muted">This information will be visible to companies</p>
           </div>
         </div>
 
         <!-- Form -->
         <form novalidate class="px-6 py-8 space-y-6" @submit.prevent="handleSubmit">
-          <div v-if="errorMsg" class="rounded-md bg-red-50 p-4 text-sm text-red-700">
+          <div v-if="errorMsg" class="rounded-md alert-error p-4 text-sm">
             {{ errorMsg }}
           </div>
-          <div v-if="successMsg" class="rounded-md bg-green-50 p-4 text-sm text-green-700">
+          <div v-if="successMsg" class="rounded-md alert-success p-4 text-sm">
             {{ successMsg }}
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label class="block text-sm font-medium text-gray-700">First name *</label>
+              <label class="block text-sm font-medium text-text-muted">First name *</label>
               <input v-model="firstName" required type="text"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                class="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 text-text-strong shadow-sm focus:border-primary focus:ring-primary sm:text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">Last name *</label>
+              <label class="block text-sm font-medium text-text-muted">Last name *</label>
               <input v-model="lastName" required type="text"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                class="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 text-text-strong shadow-sm focus:border-primary focus:ring-primary sm:text-sm" />
             </div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700">Display name</label>
+            <label class="block text-sm font-medium text-text-muted">Display name</label>
             <input v-model="displayName" type="text" placeholder="How your name appears publicly"
-              class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+              class="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 text-text-strong shadow-sm focus:border-primary focus:ring-primary sm:text-sm" />
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700">Phone</label>
+            <label class="block text-sm font-medium text-text-muted">Phone</label>
             <input v-model="phone" type="tel"
-              class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+              class="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 text-text-strong shadow-sm focus:border-primary focus:ring-primary sm:text-sm" />
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700">Professional Headline</label>
+            <label class="block text-sm font-medium text-text-muted">Professional Headline</label>
             <input v-model="headline" type="text" placeholder="e.g. Full Stack Developer | Open to opportunities"
-              class="mt-1 block border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+              class="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 text-text-strong shadow-sm focus:border-primary focus:ring-primary sm:text-sm" />
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label class="block text-sm font-medium text-gray-700">Current Job Title</label>
+              <label class="block text-sm font-medium text-text-muted">Current Job Title</label>
               <input v-model="currentJobTitle" type="text"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                class="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 text-text-strong shadow-sm focus:border-primary focus:ring-primary sm:text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">Current Company</label>
+              <label class="block text-sm font-medium text-text-muted">Current Company</label>
               <input v-model="currentCompany" type="text"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                class="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 text-text-strong shadow-sm focus:border-primary focus:ring-primary sm:text-sm" />
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label class="block text-sm font-medium text-gray-700">Country Code (ISO)</label>
+              <label class="block text-sm font-medium text-text-muted">Country Code (ISO)</label>
               <input v-model="countryCode" type="text" maxlength="2" placeholder="IN, US, GB..."
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                class="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 text-text-strong shadow-sm focus:border-primary focus:ring-primary sm:text-sm" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">City</label>
+              <label class="block text-sm font-medium text-text-muted">City</label>
               <input v-model="city" type="text"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                class="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 text-text-strong shadow-sm focus:border-primary focus:ring-primary sm:text-sm" />
             </div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700">Bio</label>
+            <label class="block text-sm font-medium text-text-muted">Bio</label>
             <textarea v-model="bio" rows="4"
-              class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              class="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 text-text-strong shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
               placeholder="Tell companies a bit about yourself..."></textarea>
           </div>
 
-          <!-- Bottom feedback alerts -->
-          <div v-if="errorMsg" class="rounded-md bg-red-50 p-4 text-sm text-red-700">
-            {{ errorMsg }}
-          </div>
-          <div v-if="successMsg" class="rounded-md bg-green-50 p-4 text-sm text-green-700">
-            {{ successMsg }}
-          </div>
-
-          <div class="pt-2">
+          <div class="pt-2 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              @click="router.back()"
+              class="px-4 py-3 rounded-md border border-border bg-card text-text-strong hover:bg-surface-raised text-sm font-medium transition"
+            >
+              Cancel
+            </button>
             <button
               type="submit"
               :disabled="loading"
-              @click="handleSubmit"
-              class="w-full flex items-center justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 cursor-pointer transition"
+              class="flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 cursor-pointer transition"
             >
               <svg v-if="loading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

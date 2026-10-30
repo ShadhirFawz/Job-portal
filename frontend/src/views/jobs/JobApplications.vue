@@ -6,7 +6,6 @@ import { useJobsStore } from '@/stores/jobs'
 import { applicationService } from '@/services/application.service'
 import { organizationService } from '@/services/organization.service'
 import { getProfileImageUrl } from '@/composables/useProfileImage'
-import { getOrganizationImageUrl } from '@/composables/useOrganizationImage'
 import type {
   JobApplication,
   ApplicationStatus,
@@ -15,11 +14,6 @@ import type {
 import {
   ArrowLeft,
   Briefcase,
-  Building2,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Filter,
   Mail,
   MapPin,
   Phone,
@@ -29,7 +23,6 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
-  Sparkles,
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
@@ -193,14 +186,15 @@ function formatAppliedDate(dateString: string): string {
 </script>
 
 <template>
-  <div class="min-h-screen bg-page py-8 px-4 sm:px-6 lg:px-8">
+  <div class="min-h-screen bg-page py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
     <div class="max-w-6xl mx-auto space-y-6">
-      <!-- Back Navigation -->
-      <div class="flex items-center justify-between">
+      
+      <!-- Back Navigation & Organization Link -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <button
           type="button"
           @click="router.push(`/jobs/${jobId}`)"
-          class="inline-flex items-center gap-1.5 text-sm font-medium text-text-muted hover:text-text-strong transition"
+          class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-text-muted hover:text-text-strong transition focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-md"
         >
           <ArrowLeft class="h-4 w-4" /> Back to Job Details
         </button>
@@ -208,7 +202,7 @@ function formatAppliedDate(dateString: string): string {
         <router-link
           v-if="job?.organization_id"
           :to="`/organizations/${job.organization_id}`"
-          class="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1"
+          class="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 self-start sm:self-auto"
         >
           {{ job.organization?.name || 'Organization' }} Dashboard
           <ExternalLink class="h-3 w-3" />
@@ -216,27 +210,27 @@ function formatAppliedDate(dateString: string): string {
       </div>
 
       <!-- Loading State -->
-      <div v-if="loading" class="bg-card rounded-2xl shadow-sm border border-border p-16 text-center">
+      <div v-if="loading" class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-12 sm:p-16 text-center">
         <div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-3"></div>
-        <p class="text-sm text-text-muted">Loading job applications...</p>
+        <p class="text-xs sm:text-sm text-text-muted">Loading job applications...</p>
       </div>
 
       <!-- Unauthorized State -->
       <div
         v-else-if="!authorized"
-        class="bg-card rounded-2xl shadow-sm border border-danger-border p-12 text-center space-y-4"
+        class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-danger-border p-8 sm:p-12 text-center space-y-4"
       >
         <div class="h-12 w-12 rounded-full bg-danger-bg text-danger flex items-center justify-center mx-auto">
           <ShieldAlert class="h-6 w-6" />
         </div>
-        <h2 class="text-xl font-bold text-text-strong">Access Restricted</h2>
-        <p class="text-sm text-text-muted max-w-md mx-auto">
+        <h2 class="text-lg sm:text-xl font-bold text-text-strong">Access Restricted</h2>
+        <p class="text-xs sm:text-sm text-text-muted max-w-md mx-auto leading-relaxed">
           Viewing applications is restricted to OrgAdmin and OrgStaff members of this organization.
         </p>
         <button
           type="button"
           @click="router.push(`/jobs/${jobId}`)"
-          class="inline-flex items-center px-4 py-2 text-xs font-semibold rounded-lg text-white bg-primary hover:bg-primary-hover transition"
+          class="inline-flex items-center px-4 py-2 text-xs font-semibold rounded-lg text-white bg-primary hover:bg-primary-hover transition shadow-sm"
         >
           Return to Job Details
         </button>
@@ -244,19 +238,20 @@ function formatAppliedDate(dateString: string): string {
 
       <!-- Main Content -->
       <div v-else class="space-y-6">
+        
         <!-- Top Job Summary Card -->
-        <div class="bg-card rounded-2xl shadow-sm border border-border p-6 sm:p-8">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
+        <div class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-4 sm:p-6 lg:p-8">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
+            <div class="space-y-1.5 min-w-0">
               <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-primary">
-                <Briefcase class="h-3.5 w-3.5" />
+                <Briefcase class="h-3.5 w-3.5 flex-shrink-0" />
                 <span>Candidate Pipeline</span>
               </div>
-              <h1 class="text-2xl sm:text-3xl font-bold text-text-strong mt-1">
+              <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-text-strong tracking-tight truncate">
                 {{ job?.title }}
               </h1>
-              <p class="text-sm text-text-secondary mt-1 flex flex-wrap items-center gap-2">
-                <span>{{ job?.organization?.name }}</span>
+              <p class="text-xs sm:text-sm text-text-secondary flex flex-wrap items-center gap-1.5">
+                <span class="font-medium">{{ job?.organization?.name }}</span>
                 <span>•</span>
                 <span class="capitalize">{{ job?.job_type?.replace('_', ' ') }}</span>
                 <span v-if="job?.city">•</span>
@@ -265,81 +260,84 @@ function formatAppliedDate(dateString: string): string {
             </div>
 
             <!-- Stats Badge -->
-            <div class="flex items-center gap-3">
-              <div class="bg-primary-light border border-primary/30 rounded-xl px-4 py-3 text-center">
-                <span class="block text-2xl font-bold text-primary">
+            <div class="flex items-center self-start lg:self-auto">
+              <div class="bg-primary-light border border-primary/30 rounded-xl px-4 py-3 text-center min-w-[120px]">
+                <span class="block text-xl sm:text-2xl font-bold text-primary">
                   {{ applications.length }}
                 </span>
-                <span class="text-xs font-medium text-primary">Total Applicants</span>
+                <span class="text-[11px] sm:text-xs font-semibold text-primary uppercase tracking-wide">Total Applicants</span>
               </div>
             </div>
           </div>
 
           <!-- Search & Filter Controls -->
-          <div class="mt-6 pt-6 border-t border-border flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-            <!-- Search bar -->
-            <div class="relative flex-1 max-w-md">
-              <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-subtle" />
+          <div class="mt-6 pt-5 border-t border-border flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+            <!-- Search bar (constrained and responsive) -->
+            <div class="relative w-full lg:w-76 flex-shrink-0">
+              <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-subtle pointer-events-none" />
               <input
                 v-model="searchQuery"
                 type="text"
                 placeholder="Search candidates by name, email, or headline..."
-                class="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-border bg-card text-text-strong placeholder:text-text-subtle focus:border-primary focus:ring-1 focus:ring-primary shadow-sm"
+                class="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-xl border border-border bg-card text-text-strong placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/25 shadow-sm transition"
               />
             </div>
 
-            <!-- Status Tabs -->
-            <div class="flex flex-wrap items-center gap-1.5">
-              <button
-                v-for="tab in filterTabs"
-                :key="tab.value"
-                type="button"
-                @click="statusFilter = tab.value"
-                class="px-3 py-1.5 text-xs font-semibold rounded-lg transition"
-                :class="
-                  statusFilter === tab.value
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'bg-surface-raised text-text-secondary hover:bg-surface-raised/70 border border-border'
-                "
-              >
-                {{ tab.label }}
-                <span
-                  class="ml-1 text-[11px] px-1.5 py-0.2 rounded-full"
+            <!-- Status Tabs (Horizontal Scrollable Layout) -->
+            <div class="w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div class="flex items-center gap-1.5 min-w-max">
+                <button
+                  v-for="tab in filterTabs"
+                  :key="tab.value"
+                  type="button"
+                  @click="statusFilter = tab.value"
+                  class="px-3 py-1.5 text-xs font-semibold rounded-lg transition whitespace-nowrap flex-shrink-0"
                   :class="
                     statusFilter === tab.value
-                      ? 'bg-white/25 text-white'
-                      : 'bg-card text-text-muted border border-border'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'bg-surface-raised text-text-secondary hover:bg-surface-raised/70 border border-border'
                   "
                 >
-                  {{ statusCounts[tab.value] || 0 }}
-                </span>
-              </button>
+                  {{ tab.label }}
+                  <span
+                    class="ml-1 text-[10px] sm:text-[11px] px-1.5 py-0.2 rounded-full"
+                    :class="
+                      statusFilter === tab.value
+                        ? 'bg-white/25 text-white'
+                        : 'bg-card text-text-muted border border-border'
+                    "
+                  >
+                    {{ statusCounts[tab.value] || 0 }}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Applications List -->
-        <div v-if="filteredApplications.length === 0" class="bg-card rounded-2xl shadow-sm border border-border p-12 text-center space-y-3">
+        <!-- Applications List Empty State -->
+        <div v-if="filteredApplications.length === 0" class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-10 sm:p-12 text-center space-y-3">
           <User class="h-10 w-10 text-text-subtle mx-auto" />
-          <h3 class="text-base font-bold text-text-strong">No Applications Found</h3>
-          <p class="text-xs text-text-muted max-w-sm mx-auto">
+          <h3 class="text-sm sm:text-base font-bold text-text-strong">No Applications Found</h3>
+          <p class="text-xs text-text-muted max-w-sm mx-auto leading-relaxed">
             <span v-if="searchQuery">No applicants match your search query "{{ searchQuery }}".</span>
             <span v-else-if="statusFilter !== 'all'">No candidates found in the "{{ statusFilter.replace('_', ' ') }}" stage.</span>
             <span v-else>No candidates have applied to this job yet.</span>
           </p>
         </div>
 
+        <!-- Applications List Items -->
         <div v-else class="space-y-4">
           <div
             v-for="app in filteredApplications"
             :key="app.id"
-            class="bg-card rounded-2xl shadow-sm border border-border p-5 sm:p-6 transition hover:border-border-strong space-y-4"
+            class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-4 sm:p-6 transition hover:border-border-strong space-y-4"
           >
             <!-- Top Row: Applicant Profile & Status -->
-            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-              <div class="flex items-start gap-4">
+            <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+              <div class="flex items-start gap-3.5 sm:gap-4 min-w-0">
                 <!-- Avatar -->
-                <div class="h-12 w-12 rounded-full bg-primary text-white font-bold text-lg flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                <div class="h-11 w-11 sm:h-12 sm:w-12 rounded-full bg-primary text-white font-bold text-base sm:text-lg flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm">
                   <img
                     v-if="app.user?.avatar_path"
                     :src="getProfileImageUrl(app.user.avatar_path) || ''"
@@ -350,36 +348,36 @@ function formatAppliedDate(dateString: string): string {
                 </div>
 
                 <!-- Info -->
-                <div class="min-w-0">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <h3 class="text-base font-bold text-text-strong truncate">
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <h3 class="text-sm sm:text-base font-bold text-text-strong truncate">
                       {{ getApplicantName(app.user) }}
                     </h3>
                     <span class="text-xs text-text-subtle">•</span>
-                    <span class="text-xs text-text-muted">
+                    <span class="text-[11px] sm:text-xs text-text-muted whitespace-nowrap">
                       Applied {{ formatAppliedDate(app.applied_at) }}
                     </span>
                   </div>
 
-                  <p v-if="app.user?.headline || app.user?.current_job_title" class="text-xs text-text-secondary font-medium mt-0.5">
+                  <p v-if="app.user?.headline || app.user?.current_job_title" class="text-xs text-text-secondary font-medium mt-0.5 truncate">
                     {{ app.user.headline || app.user.current_job_title }}
                   </p>
 
                   <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-muted">
-                    <span class="inline-flex items-center gap-1">
-                      <Mail class="h-3 w-3 text-text-subtle" />
-                      <a :href="`mailto:${app.user?.email}`" class="hover:text-primary hover:underline">
+                    <span class="inline-flex items-center gap-1 truncate">
+                      <Mail class="h-3 w-3 text-text-subtle flex-shrink-0" />
+                      <a :href="`mailto:${app.user?.email}`" class="hover:text-primary hover:underline truncate">
                         {{ app.user?.email }}
                       </a>
                     </span>
 
                     <span v-if="app.user?.phone" class="inline-flex items-center gap-1">
-                      <Phone class="h-3 w-3 text-text-subtle" />
+                      <Phone class="h-3 w-3 text-text-subtle flex-shrink-0" />
                       {{ app.user.phone }}
                     </span>
 
                     <span v-if="app.user?.city" class="inline-flex items-center gap-1">
-                      <MapPin class="h-3 w-3 text-text-subtle" />
+                      <MapPin class="h-3 w-3 text-text-subtle flex-shrink-0" />
                       {{ app.user.city }}
                     </span>
                   </div>
@@ -387,9 +385,9 @@ function formatAppliedDate(dateString: string): string {
               </div>
 
               <!-- Status Badge & Controls -->
-              <div class="flex flex-col sm:items-end gap-2.5">
+              <div class="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-3 pt-2 lg:pt-0 border-t lg:border-t-0 border-border">
                 <span
-                  class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider border"
+                  class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold uppercase tracking-wider border"
                   :class="{
                     'badge-neutral': app.status === 'applied' || app.status === 'withdrawn',
                     'badge-warning': app.status === 'under_review',
@@ -402,7 +400,7 @@ function formatAppliedDate(dateString: string): string {
                 </span>
 
                 <!-- Action Pipeline Buttons -->
-                <div class="flex flex-wrap items-center gap-1.5 justify-end">
+                <div class="flex flex-wrap items-center gap-1.5">
                   <button
                     v-if="app.status === 'applied'"
                     type="button"
@@ -469,7 +467,7 @@ function formatAppliedDate(dateString: string): string {
             <!-- Cover Letter Section (Collapsible) -->
             <div v-if="app.cover_letter" class="pt-3 border-t border-border">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">
+                <span class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-text-muted">
                   Cover Letter
                 </span>
                 <button
@@ -484,7 +482,7 @@ function formatAppliedDate(dateString: string): string {
               </div>
 
               <div
-                class="mt-2 text-xs text-text-secondary bg-surface-raised p-3.5 rounded-xl border border-border whitespace-pre-line leading-relaxed"
+                class="mt-2 text-xs text-text-secondary bg-surface-raised p-3 sm:p-3.5 rounded-xl border border-border whitespace-pre-line leading-relaxed"
                 :class="{ 'line-clamp-3': !expandedCoverLetters[app.id] }"
               >
                 {{ app.cover_letter }}
@@ -496,7 +494,7 @@ function formatAppliedDate(dateString: string): string {
               v-if="app.custom_answers && Object.keys(app.custom_answers).length > 0"
               class="pt-3 border-t border-border space-y-2"
             >
-              <span class="text-xs font-bold uppercase tracking-wider text-text-muted">
+              <span class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-text-muted">
                 Custom Answers
               </span>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -506,12 +504,13 @@ function formatAppliedDate(dateString: string): string {
                   class="p-2.5 bg-surface-raised rounded-lg border border-border"
                 >
                   <span class="font-semibold text-text-strong capitalize">{{ key }}:</span>
-                  <p class="text-text-secondary mt-0.5">{{ val }}</p>
+                  <p class="text-text-secondary mt-0.5 leading-relaxed">{{ val }}</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   </div>
