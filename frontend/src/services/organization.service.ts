@@ -76,6 +76,34 @@ export const organizationService = {
   },
 
   /**
+   * Check if a user is an OrgAdmin or OrgStaff of an organization (creator, super_admin, or active org_admin/org_staff member).
+   */
+  async checkIsOrgAdminOrStaff(
+    orgId: string,
+    userId: string,
+    userRole?: string,
+    orgCreatedBy?: string
+  ): Promise<boolean> {
+    if (orgCreatedBy && orgCreatedBy === userId) return true
+    if (userRole === 'super_admin') return true
+
+    const { data, error } = await supabase
+      .from('organization_members')
+      .select('role, status')
+      .eq('organization_id', orgId)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle()
+
+    if (error) {
+      console.error('Error checking org permissions:', error)
+      return false
+    }
+
+    return data?.role === 'org_admin' || data?.role === 'org_staff'
+  },
+
+  /**
    * Create a new organization and assign the creator as active org_admin.
    */
   async createOrganization(

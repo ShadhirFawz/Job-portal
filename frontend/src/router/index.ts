@@ -45,6 +45,18 @@ const router = createRouter({
       component: () => import('@/views/jobs/JobDetail.vue')
     },
     {
+      path: '/jobs/:id/apply',
+      name: 'apply-job',
+      component: () => import('@/views/jobs/ApplyJob.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/jobs/:id/applications',
+      name: 'job-applications',
+      component: () => import('@/views/jobs/JobApplications.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/invitations',
       name: 'my-invitations',
       component: () => import('@/views/organizations/MyInvitations.vue'),

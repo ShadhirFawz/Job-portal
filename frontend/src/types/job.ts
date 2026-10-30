@@ -60,6 +60,9 @@ export interface Job {
   published_at: string | null
   closed_at?: string | null
   application_deadline: string | null
+  accept_applications?: boolean
+  max_applications?: number | null
+  custom_form_schema?: any[]
   applications_count: number
   views_count?: number
   created_by?: string
