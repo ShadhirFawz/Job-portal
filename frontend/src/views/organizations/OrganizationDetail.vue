@@ -565,6 +565,33 @@ async function sendVerificationEmail() {
               {{ org.description || 'No description provided.' }}
             </p>
 
+            <!-- Office Location Details -->
+            <div
+              v-if="org.has_physical_office && (org.address_line1 || org.city || org.country_code)"
+              class="mt-6 pt-6 border-t border-border space-y-3"
+            >
+              <h3 class="text-sm font-bold text-strong flex items-center gap-1.5">
+                <MapPin class="h-4 w-4 text-primary" /> Office Location
+              </h3>
+              <div class="text-xs sm:text-sm text-body space-y-0.5">
+                <p v-if="org.address_line1" class="font-medium text-strong">{{ org.address_line1 }}</p>
+                <p v-if="org.address_line2" class="text-muted">{{ org.address_line2 }}</p>
+                <p class="text-muted">
+                  {{ [org.city, org.state_province, org.postal_code, org.country_code].filter(Boolean).join(', ') }}
+                </p>
+                <div v-if="org.latitude && org.longitude" class="pt-2">
+                  <a
+                    :href="`https://www.openstreetmap.org/?mlat=${org.latitude}&mlon=${org.longitude}#map=16/${org.latitude}/${org.longitude}`"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                  >
+                    View on Map ↗
+                  </a>
+                </div>
+              </div>
+            </div>
+
             <div
               v-if="org.status === 'pending_verification'"
               class="mt-6 alert alert-warning flex items-start gap-3"

@@ -54,10 +54,18 @@ export interface OrganizationCreateInput {
   industry?: string | null
   company_size?: string | null
   founded_year?: number | null
+  company_type?: string | null
   has_physical_office?: boolean
   country_code?: string | null
+  state_province?: string | null
   city?: string | null
+  postal_code?: string | null
   address_line1?: string | null
+  address_line2?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  avatar_path?: string | null
+  cover_path?: string | null
 }
 
 export interface OrganizationUpdateInput {
@@ -81,6 +89,8 @@ export interface OrganizationUpdateInput {
   postal_code?: string | null
   address_line1?: string | null
   address_line2?: string | null
+  latitude?: number | null
+  longitude?: number | null
   linkedin_url?: string | null
   twitter_url?: string | null
   facebook_url?: string | null

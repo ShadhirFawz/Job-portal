@@ -4,13 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import {
   ArrowLeft,
-  Building2,
   Camera,
   Check,
   Globe,
   Loader2,
   Mail,
-  MapPin,
   Phone,
   Trash2,
   Upload,
@@ -20,7 +18,7 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationsStore } from '@/stores/organizations'
 import { organizationService } from '@/services/organization.service'
-import type { OrganizationUpdateInput } from '@/types/organization'
+import LocationPickerMap from '@/components/ui/LocationPickerMap.vue'
 import {
   uploadOrganizationImage,
   deleteOrganizationImage,
@@ -62,6 +60,8 @@ const city = ref('')
 const postalCode = ref('')
 const addressLine1 = ref('')
 const addressLine2 = ref('')
+const latitude = ref<number | null>(null)
+const longitude = ref<number | null>(null)
 
 const linkedinUrl = ref('')
 const twitterUrl = ref('')
@@ -147,6 +147,8 @@ async function loadAndAuthorize() {
     postalCode.value = org.postal_code || ''
     addressLine1.value = org.address_line1 || ''
     addressLine2.value = org.address_line2 || ''
+    latitude.value = org.latitude != null ? Number(org.latitude) : null
+    longitude.value = org.longitude != null ? Number(org.longitude) : null
 
     linkedinUrl.value = org.linkedin_url || ''
     twitterUrl.value = org.twitter_url || ''
@@ -269,6 +271,8 @@ async function handleSave() {
       postal_code: postalCode.value.trim() || null,
       address_line1: addressLine1.value.trim() || null,
       address_line2: addressLine2.value.trim() || null,
+      latitude: latitude.value,
+      longitude: longitude.value,
       linkedin_url: linkedinUrl.value.trim() || null,
       twitter_url: twitterUrl.value.trim() || null,
       facebook_url: facebookUrl.value.trim() || null,
@@ -652,17 +656,42 @@ async function handleSave() {
               </label>
             </div>
 
-            <div v-if="hasPhysicalOffice" class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 pt-2">
-              <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Country Code (2-letter ISO)</label>
-                <input
-                  v-model="countryCode"
-                  type="text"
-                  maxlength="2"
-                  class="uppercase"
-                  placeholder="US / IN / GB"
+            <div v-if="hasPhysicalOffice" class="space-y-6 pt-2">
+              <!-- Location Picker Map -->
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <label class="block text-xs sm:text-sm font-semibold text-text-strong">
+                    Pinpoint Exact Location on Map
+                  </label>
+                  <span class="text-[11px] text-text-muted">
+                    Click map, drag marker, or search address to update location
+                  </span>
+                </div>
+
+                <LocationPickerMap
+                  v-model:latitude="latitude"
+                  v-model:longitude="longitude"
+                  v-model:address-line1="addressLine1"
+                  v-model:address-line2="addressLine2"
+                  v-model:city="city"
+                  v-model:state-province="stateProvince"
+                  v-model:postal-code="postalCode"
+                  v-model:country-code="countryCode"
                 />
               </div>
+
+              <!-- Manual Address Fields -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 pt-2">
+                <div>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Country Code (2-letter ISO)</label>
+                  <input
+                    v-model="countryCode"
+                    type="text"
+                    maxlength="2"
+                    class="uppercase font-mono"
+                    placeholder="US / IN / GB"
+                  />
+                </div>
 
               <div>
                 <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">State / Province</label>
@@ -710,6 +739,7 @@ async function handleSave() {
               </div>
             </div>
           </div>
+        </div>
 
           <!-- 5. SOCIAL & WEB PRESENCE -->
           <div class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-4 sm:p-6 lg:p-8 space-y-6">
