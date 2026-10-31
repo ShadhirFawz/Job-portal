@@ -3,9 +3,13 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import { Toaster } from 'vue-sonner'
-import 'vue-sonner/style.css'
 import { useAuthStore } from './stores/auth'
+import { useTheme } from './composables/useTheme'
 import './assets/main.css'
+
+// Initialize theme immediately to prevent theme flash
+const { initTheme } = useTheme()
+initTheme()
 
 const app = createApp(App)
 const pinia = createPinia()
