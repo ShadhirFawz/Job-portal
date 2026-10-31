@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { resumeService } from '@/services/resume.service'
 import { uploadResumeFile } from '@/composables/useResumeUpload'
@@ -18,11 +18,15 @@ import {
   Loader2,
   X,
   FileCheck,
+  Info,
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
+
+const redirectUrl = computed(() => (route.query.redirect as string) || null)
 
 const resumes = ref<Resume[]>([])
 const loading = ref(true)
@@ -41,7 +45,20 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const MAX_RESUMES = 5
 const canUploadMore = computed(() => resumes.value.length < MAX_RESUMES)
 
-onMounted(loadResumes)
+onMounted(async () => {
+  await loadResumes()
+  if (redirectUrl.value && canUploadMore.value) {
+    showUploadForm.value = true
+  }
+})
+
+function handleBack() {
+  if (redirectUrl.value) {
+    router.push(redirectUrl.value)
+  } else {
+    router.back()
+  }
+}
 
 async function loadResumes() {
   if (!auth.user) return
@@ -138,7 +155,7 @@ async function handleUpload() {
 
     // 2. Insert resume metadata into database via service
     const isFirst = resumes.value.length === 0
-    await resumeService.createResume({
+    const newResume = await resumeService.createResume({
       user_id: auth.user.id,
       title: newTitle.value.trim(),
       file_path: uploadResult.path,
@@ -150,6 +167,15 @@ async function handleUpload() {
 
     toast.success('Resume uploaded successfully!')
     cancelUpload()
+
+    if (redirectUrl.value) {
+      toast.info('Returning to your job application...')
+      const separator = redirectUrl.value.includes('?') ? '&' : '?'
+      const returnTarget = `${redirectUrl.value}${separator}resume_id=${newResume.id}`
+      router.push(returnTarget)
+      return
+    }
+
     await loadResumes()
   } catch (err: any) {
     errorMsg.value = err.message || 'Failed to complete resume upload.'

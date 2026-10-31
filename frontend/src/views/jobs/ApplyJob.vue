@@ -11,9 +11,6 @@ import { formatJobDate } from '@/utils/date'
 import type { JobApplication } from '@/types/application'
 import type { Resume } from '@/types/resume'
 import {
-  Briefcase,
-  Building2,
-  Calendar,
   CheckCircle2,
   Clock,
   ArrowLeft,
@@ -24,7 +21,7 @@ import {
   Mail,
   MapPin,
   Sparkles,
-  Info,
+  ArrowUpFromLineIcon,
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
@@ -629,7 +626,7 @@ async function handleApply() {
                   to="/resumes"
                   class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover transition shrink-0 shadow-sm"
                 >
-                  <Plus class="h-3.5 w-3.5" />
+                  <ArrowUpFromLineIcon class="h-3.5 w-3.5" />
                   <span>Upload Resume</span>
                 </router-link>
               </div>
