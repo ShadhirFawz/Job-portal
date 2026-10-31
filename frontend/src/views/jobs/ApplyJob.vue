@@ -4,14 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useJobsStore } from '@/stores/jobs'
 import { applicationService } from '@/services/application.service'
+import { resumeService } from '@/services/resume.service'
 import { getProfileImageUrl } from '@/composables/useProfileImage'
 import { getOrganizationImageUrl } from '@/composables/useOrganizationImage'
 import { formatJobDate } from '@/utils/date'
 import type { JobApplication } from '@/types/application'
+import type { Resume } from '@/types/resume'
 import {
-  Briefcase,
-  Building2,
-  Calendar,
   CheckCircle2,
   Clock,
   ArrowLeft,
@@ -22,7 +21,7 @@ import {
   Mail,
   MapPin,
   Sparkles,
-  Info,
+  ArrowUpFromLineIcon,
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
@@ -42,6 +41,17 @@ const existingApplication = ref<JobApplication | null>(null)
 
 const coverLetter = ref('')
 const customAnswers = ref<Record<string, any>>({})
+const userResumes = ref<Resume[]>([])
+const selectedResumeId = ref<string | null>(null)
+const loadingResumes = ref(false)
+const appliedResume = ref<Resume | null>(null)
+
+function formatFileSize(bytes: number | null | undefined): string {
+  if (!bytes) return ''
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
 
 const job = computed(() => jobsStore.currentJob)
 
@@ -92,6 +102,28 @@ onMounted(async () => {
           jobId,
           auth.user.id
         )
+        if (existingApplication.value?.resume_id) {
+          appliedResume.value = await resumeService.fetchResumeById(
+            existingApplication.value.resume_id
+          )
+        }
+      } else {
+        // Fetch user's active resumes for applying
+        try {
+          loadingResumes.value = true
+          userResumes.value = await resumeService.fetchUserResumes(auth.user.id)
+          const primary = userResumes.value.find((r) => r.is_primary)
+          const firstResume = userResumes.value[0]
+          if (primary) {
+            selectedResumeId.value = primary.id
+          } else if (firstResume) {
+            selectedResumeId.value = firstResume.id
+          }
+        } catch (resErr) {
+          console.warn('Could not load resumes:', resErr)
+        } finally {
+          loadingResumes.value = false
+        }
       }
     }
   } catch (err: any) {
@@ -123,6 +155,7 @@ async function handleApply() {
       job_id: jobId,
       user_id: auth.user.id,
       cover_letter: coverLetter.value.trim() || null,
+      resume_id: selectedResumeId.value || null,
       custom_answers: customAnswers.value,
       status: 'applied',
     })
@@ -273,6 +306,22 @@ async function handleApply() {
                     {{ existingApplication?.status.replace('_', ' ') || 'Applied' }}
                   </span>
                 </div>
+              </div>
+            </div>
+
+            <div
+              v-if="appliedResume"
+              class="mt-3 sm:mt-4 pt-3 border-t border-success-border text-xs"
+            >
+              <span class="font-semibold block mb-1">Attached Resume:</span>
+              <div
+                class="inline-flex items-center gap-2 bg-card/60 px-3 py-1.5 rounded-lg border border-success-border text-xs"
+              >
+                <FileText class="h-4 w-4 text-success shrink-0" />
+                <span class="font-medium text-text-strong">{{ appliedResume.title }}</span>
+                <span v-if="appliedResume.file_size" class="text-text-muted">
+                  ({{ formatFileSize(appliedResume.file_size) }})
+                </span>
               </div>
             </div>
 
@@ -466,6 +515,121 @@ async function handleApply() {
               class="alert alert-success p-3 sm:p-3.5 text-[11px] sm:text-xs font-medium rounded-lg"
             >
               {{ successMsg }}
+            </div>
+
+            <!-- Resume Selection -->
+            <div class="space-y-2.5">
+              <div class="flex items-center justify-between">
+                <label
+                  class="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-text-secondary"
+                >
+                  Resume / CV
+                  <span class="text-text-subtle font-normal normal-case">(Recommended)</span>
+                </label>
+                <router-link
+                  to="/resumes"
+                  class="text-[10px] sm:text-[11px] font-semibold text-primary hover:underline flex items-center gap-1"
+                >
+                  <Plus class="h-3 w-3" />
+                  <span>Manage Resumes</span>
+                </router-link>
+              </div>
+
+              <!-- Loading State -->
+              <div
+                v-if="loadingResumes"
+                class="py-3 text-xs text-text-muted flex items-center gap-2"
+              >
+                <div
+                  class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent"
+                ></div>
+                <span>Loading your resumes...</span>
+              </div>
+
+              <!-- User has resumes -->
+              <div v-else-if="userResumes.length > 0" class="space-y-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <label
+                    v-for="r in userResumes"
+                    :key="r.id"
+                    class="relative flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition select-none"
+                    :class="
+                      selectedResumeId === r.id
+                        ? 'border-primary bg-primary-light/40 shadow-sm ring-1 ring-primary'
+                        : 'border-border bg-card hover:border-border-strong hover:bg-surface-raised'
+                    "
+                  >
+                    <input
+                      type="radio"
+                      name="resume-selection"
+                      :value="r.id"
+                      v-model="selectedResumeId"
+                      class="mt-0.5 h-4 w-4 text-primary focus:ring-primary border-border"
+                    />
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-xs font-bold text-text-strong truncate">
+                          {{ r.title }}
+                        </span>
+                        <span
+                          v-if="r.is_primary"
+                          class="px-1.5 py-0.2 text-[9px] font-semibold rounded bg-primary-light text-primary border border-primary/20 shrink-0"
+                        >
+                          Primary
+                        </span>
+                      </div>
+                      <p class="text-[11px] text-text-muted truncate mt-0.5">
+                        {{ r.file_name || 'Document' }}
+                        <span v-if="r.file_size"> • {{ formatFileSize(r.file_size) }}</span>
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="flex items-center justify-between pt-0.5">
+                  <button
+                    v-if="selectedResumeId"
+                    type="button"
+                    @click="selectedResumeId = null"
+                    class="text-[11px] text-text-muted hover:text-text-strong hover:underline"
+                  >
+                    Don't attach a resume
+                  </button>
+                  <span v-else class="text-[11px] text-text-muted italic">
+                    No resume selected (submitting application without resume).
+                  </span>
+                </div>
+              </div>
+
+              <!-- No resumes uploaded yet -->
+              <div
+                v-else
+                class="p-3.5 sm:p-4 rounded-xl border border-dashed border-border bg-surface-raised flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              >
+                <div class="flex items-start gap-3 min-w-0">
+                  <div
+                    class="h-8 w-8 rounded-lg bg-card border border-border flex items-center justify-center text-text-muted shrink-0"
+                  >
+                    <FileText class="h-4 w-4" />
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-xs font-semibold text-text-strong">
+                      You haven't uploaded any resumes yet
+                    </p>
+                    <p class="text-[11px] text-text-muted">
+                      Uploading a resume helps employers assess your fit for this role.
+                    </p>
+                  </div>
+                </div>
+
+                <router-link
+                  to="/resumes"
+                  class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover transition shrink-0 shadow-sm"
+                >
+                  <ArrowUpFromLineIcon class="h-3.5 w-3.5" />
+                  <span>Upload Resume</span>
+                </router-link>
+              </div>
             </div>
 
             <!-- Cover Letter Input -->

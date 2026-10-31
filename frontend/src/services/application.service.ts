@@ -63,6 +63,7 @@ export const applicationService = {
         job_id: input.job_id,
         user_id: input.user_id,
         cover_letter: input.cover_letter?.trim() || null,
+        resume_id: input.resume_id || null,
         custom_answers: input.custom_answers || {},
         status: input.status || 'applied',
       })
@@ -140,6 +141,14 @@ export const applicationService = {
           phone,
           city,
           country_code
+        ),
+        resume:resumes!resume_id (
+          id,
+          title,
+          file_name,
+          file_path,
+          file_size,
+          file_type
         )
       `)
       .eq('job_id', jobId)
@@ -147,7 +156,7 @@ export const applicationService = {
 
     // Fallback if joined FK fails due to PostgREST schema cache
     if (error) {
-      console.warn('Direct FK application join failed, fetching users separately:', error.message)
+      console.warn('Direct FK application join failed, fetching related entities separately:', error.message)
       const { data: rawApps, error: rawError } = await supabase
         .from('job_applications')
         .select('*')
@@ -158,7 +167,10 @@ export const applicationService = {
 
       if (rawApps && rawApps.length > 0) {
         const userIds = [...new Set(rawApps.map((a: any) => a.user_id).filter(Boolean))]
+        const resumeIds = [...new Set(rawApps.map((a: any) => a.resume_id).filter(Boolean))]
+
         let usersMap = new Map<string, any>()
+        let resumesMap = new Map<string, any>()
 
         if (userIds.length > 0) {
           const { data: usersData } = await supabase
@@ -169,9 +181,19 @@ export const applicationService = {
           usersMap = new Map((usersData || []).map((u: any) => [u.id, u]))
         }
 
+        if (resumeIds.length > 0) {
+          const { data: resumesData } = await supabase
+            .from('resumes')
+            .select('id, title, file_name, file_path, file_size, file_type')
+            .in('id', resumeIds)
+
+          resumesMap = new Map((resumesData || []).map((r: any) => [r.id, r]))
+        }
+
         data = rawApps.map((a: any) => ({
           ...a,
           user: usersMap.get(a.user_id) || null,
+          resume: a.resume_id ? resumesMap.get(a.resume_id) || null : null,
         }))
       } else {
         data = []
