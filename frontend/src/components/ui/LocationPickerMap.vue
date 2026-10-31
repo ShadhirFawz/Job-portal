@@ -483,7 +483,7 @@ watch(
 
       <!-- Hint badge overlay -->
       <div
-        class="absolute top-3 left-3 z-20 pointer-events-none bg-card/90 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-border shadow-xs text-[11px] font-medium text-text-secondary flex items-center gap-1.5"
+        class="absolute top-3 left-3 z-15 pointer-events-none bg-card/90 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-border shadow-xs text-[11px] font-medium text-text-secondary flex items-center gap-1.5"
       >
         <MapPin class="h-3.5 w-3.5 text-primary" />
         <span>Click or drag pin to select exact office location</span>

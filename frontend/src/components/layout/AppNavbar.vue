@@ -18,6 +18,7 @@ import {
   Menu,
   X,
   Home,
+  FileText,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -224,6 +225,19 @@ function isActive(path: string): boolean {
             </template>
 
             <router-link
+              to="/resumes"
+              :class="[
+                'px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5',
+                isActive('/resumes')
+                  ? 'bg-primary-light text-primary'
+                  : 'text-text-muted hover:text-text-strong hover:bg-surface-raised',
+              ]"
+            >
+              <FileText class="h-3.5 w-3.5" />
+              Resumes
+            </router-link>
+
+            <router-link
               to="/invitations"
               :class="[
                 'px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5',
@@ -370,6 +384,15 @@ function isActive(path: string): boolean {
                   >
                     <Building2 class="h-4 w-4 text-text-subtle" />
                     <span>Register an Organization</span>
+                  </router-link>
+
+                  <router-link
+                    to="/resumes"
+                    @click="isUserMenuOpen = false"
+                    class="flex items-center gap-2.5 px-4 py-2 text-text-muted hover:bg-surface-raised hover:text-primary transition"
+                  >
+                    <FileText class="h-4 w-4 text-text-subtle" />
+                    <span>My Resumes</span>
                   </router-link>
 
                   <router-link
@@ -618,6 +641,20 @@ function isActive(path: string): boolean {
                 Register Company
               </router-link>
             </template>
+
+            <router-link
+              to="/resumes"
+              @click="closeMenus"
+              :class="[
+                'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition',
+                isActive('/resumes')
+                  ? 'bg-primary-light text-primary'
+                  : 'text-text-muted hover:bg-surface-raised hover:text-text-strong',
+              ]"
+            >
+              <FileText class="h-4 w-4 shrink-0" />
+              My Resumes
+            </router-link>
 
             <router-link
               to="/invitations"

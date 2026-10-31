@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useJobsStore } from '@/stores/jobs'
 import { applicationService } from '@/services/application.service'
 import { organizationService } from '@/services/organization.service'
+import { resumeService } from '@/services/resume.service'
 import { getProfileImageUrl } from '@/composables/useProfileImage'
 import type {
   JobApplication,
@@ -23,6 +24,9 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  FileText,
+  Download,
+  Loader2,
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
@@ -39,6 +43,7 @@ const applications = ref<JobApplication[]>([])
 const statusFilter = ref<ApplicationStatusFilter>('all')
 const searchQuery = ref('')
 const actionLoading = ref<string | null>(null)
+const downloadingResumeId = ref<string | null>(null)
 const expandedCoverLetters = ref<Record<string, boolean>>({})
 
 const job = computed(() => jobsStore.currentJob)
@@ -182,6 +187,34 @@ function formatAppliedDate(dateString: string): string {
     month: 'short',
     day: 'numeric',
   })
+}
+
+function formatFileSize(bytes: number | null | undefined): string {
+  if (!bytes) return ''
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+async function handleDownloadResume(app: JobApplication) {
+  if (!app.resume?.file_path) {
+    toast.error('No resume file attached to this application.')
+    return
+  }
+
+  downloadingResumeId.value = app.id
+  try {
+    const url = await resumeService.getDownloadUrl(app.resume.file_path)
+    if (url) {
+      window.open(url, '_blank')
+    } else {
+      toast.error('Could not generate download link for this resume.')
+    }
+  } catch (err: any) {
+    toast.error(err.message || 'Failed to download resume.')
+  } finally {
+    downloadingResumeId.value = null
+  }
 }
 </script>
 
@@ -462,6 +495,44 @@ function formatAppliedDate(dateString: string): string {
                   </button>
                 </div>
               </div>
+            </div>
+
+            <!-- Attached Resume -->
+            <div
+              v-if="app.resume"
+              class="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-raised/40 p-3 rounded-xl border"
+            >
+              <div class="flex items-center gap-3 min-w-0">
+                <div
+                  class="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0"
+                >
+                  <FileText class="h-4 w-4" />
+                </div>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-text-strong truncate">
+                      {{ app.resume.title }}
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-text-muted truncate mt-0.5">
+                    {{ app.resume.file_name }}
+                    <span v-if="app.resume.file_size">
+                      • {{ formatFileSize(app.resume.file_size) }}
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                :disabled="downloadingResumeId === app.id"
+                @click="handleDownloadResume(app)"
+                class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-text-secondary hover:text-text-strong hover:bg-surface-raised transition shrink-0"
+              >
+                <Loader2 v-if="downloadingResumeId === app.id" class="h-3.5 w-3.5 animate-spin" />
+                <Download v-else class="h-3.5 w-3.5" />
+                <span>View / Download Resume</span>
+              </button>
             </div>
 
             <!-- Cover Letter Section (Collapsible) -->
