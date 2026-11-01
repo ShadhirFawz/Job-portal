@@ -125,6 +125,49 @@ public class SupabaseContext : ISupabaseContext
         return JsonSerializer.Deserialize<List<T>>(content, JsonOptions) ?? [];
     }
 
+    public async Task<(List<T> Items, int TotalCount)> GetPagedListAsync<T>(string tableQuery, int page, int pageSize)
+    {
+        var offset = Math.Max(0, (page - 1) * pageSize);
+        var delimiter = tableQuery.Contains('?') ? "&" : "?";
+        var url = $"rest/v1/{tableQuery}{delimiter}limit={pageSize}&offset={offset}";
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        ApplyHeaders(request);
+        request.Headers.Add("Prefer", "count=exact");
+
+        using var response = await _httpClient.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("Supabase GET Paged List error: {Status} - {Content}", response.StatusCode, content);
+            throw new HttpRequestException($"Supabase query error: {content}", null, response.StatusCode);
+        }
+
+        var totalCount = 0;
+        if (response.Headers.TryGetValues("Content-Range", out var rangeValues) ||
+            response.Content.Headers.TryGetValues("Content-Range", out rangeValues))
+        {
+            var rangeHeader = rangeValues.FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(rangeHeader))
+            {
+                var slashIndex = rangeHeader.IndexOf('/');
+                if (slashIndex >= 0 && int.TryParse(rangeHeader[(slashIndex + 1)..], out var parsedCount))
+                {
+                    totalCount = parsedCount;
+                }
+            }
+        }
+
+        var items = JsonSerializer.Deserialize<List<T>>(content, JsonOptions) ?? [];
+        if (totalCount == 0 && items.Count > 0)
+        {
+            totalCount = items.Count;
+        }
+
+        return (items, totalCount);
+    }
+
     public async Task<T> InsertAsync<T>(string table, object payload)
     {
         var url = $"rest/v1/{table}";

@@ -4,6 +4,7 @@ public interface ISupabaseContext
 {
     Task<T?> GetSingleAsync<T>(string tableQuery);
     Task<List<T>> GetListAsync<T>(string tableQuery);
+    Task<(List<T> Items, int TotalCount)> GetPagedListAsync<T>(string tableQuery, int page, int pageSize);
     Task<T> InsertAsync<T>(string table, object payload);
     Task<T?> UpdateAsync<T>(string tableQuery, object payload);
     Task DeleteAsync(string tableQuery);

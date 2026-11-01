@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IResumeService, ResumeService>();
+        services.AddScoped<IJobService, JobService>();
 
         return services;
     }
