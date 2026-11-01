@@ -23,4 +23,7 @@ Thumbs.db
 # Supabase
 supabase/.temp/
 
+# Sensitive & Local Configurations
+**/appsettings.Local.json
+**/appsettings.*.Local.json
 *.Development.json

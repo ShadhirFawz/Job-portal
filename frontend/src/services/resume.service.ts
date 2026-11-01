@@ -1,143 +1,82 @@
-import { supabase } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import type { Resume, CreateResumeInput, UpdateResumeInput } from '@/types/resume'
-import { getResumeSignedUrl, deleteResumeFile } from '@/composables/useResumeUpload'
 
 export const resumeService = {
   /**
-   * Fetch all active (non-deleted) resumes for a user.
+   * Fetch all active (non-deleted) resumes for a user via .NET backend API.
    */
   async fetchUserResumes(userId: string): Promise<Resume[]> {
     if (!userId) return []
-
-    const { data, error } = await supabase
-      .from('resumes')
-      .select('*')
-      .eq('user_id', userId)
-      .is('deleted_at', null)
-      .order('is_primary', { ascending: false })
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching resumes:', error.message)
+    try {
+      return await api.get<Resume[]>(`resumes/user/${userId}`)
+    } catch (error: any) {
+      console.error('Error fetching resumes via API:', error.message)
       throw error
     }
-
-    return (data || []) as Resume[]
   },
 
   /**
-   * Fetch single resume by ID.
+   * Fetch single resume by ID via .NET backend API.
    */
   async fetchResumeById(resumeId: string): Promise<Resume | null> {
     if (!resumeId) return null
-
-    const { data, error } = await supabase
-      .from('resumes')
-      .select('*')
-      .eq('id', resumeId)
-      .maybeSingle()
-
-    if (error) {
-      console.error('Error fetching resume by id:', error.message)
+    try {
+      return await api.get<Resume>(`resumes/${resumeId}`)
+    } catch (error: any) {
+      console.error('Error fetching resume by id via API:', error.message)
       return null
     }
-
-    return (data as Resume) || null
   },
 
   /**
-   * Insert a new resume record.
+   * Insert a new resume record via .NET backend API.
    */
   async createResume(input: CreateResumeInput): Promise<Resume> {
-    const { data, error } = await supabase
-      .from('resumes')
-      .insert({
-        user_id: input.user_id,
-        title: input.title.trim(),
-        file_path: input.file_path,
-        file_name: input.file_name,
-        file_size: input.file_size,
-        file_type: input.file_type,
-        is_primary: input.is_primary ?? false,
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error creating resume:', error.message)
-      throw error
-    }
-
-    return data as Resume
+    return await api.post<Resume>('resumes', {
+      user_id: input.user_id,
+      title: input.title.trim(),
+      file_path: input.file_path,
+      file_name: input.file_name,
+      file_size: input.file_size,
+      file_type: input.file_type,
+      is_primary: input.is_primary ?? false,
+    })
   },
 
   /**
-   * Update resume fields (e.g. title, summary, skills).
+   * Update resume fields via .NET backend API.
    */
   async updateResume(resumeId: string, input: UpdateResumeInput): Promise<Resume> {
-    const { data, error } = await supabase
-      .from('resumes')
-      .update({
-        ...input,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', resumeId)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error updating resume:', error.message)
-      throw error
-    }
-
-    return data as Resume
+    return await api.put<Resume>(`resumes/${resumeId}`, input)
   },
 
   /**
-   * Mark a resume as the user's primary resume.
-   * Note: The database trigger `trigger_single_primary_resume` resets other resumes.
+   * Mark a resume as the user's primary resume via .NET backend API.
    */
   async setPrimaryResume(resumeId: string): Promise<void> {
-    const { error } = await supabase
-      .from('resumes')
-      .update({ is_primary: true })
-      .eq('id', resumeId)
-
-    if (error) {
-      console.error('Error setting primary resume:', error.message)
-      throw error
-    }
+    await api.put<{ success: boolean }>(`resumes/${resumeId}/primary`)
   },
 
   /**
-   * Soft-delete a resume and remove its underlying file from storage.
+   * Soft-delete a resume and remove file via .NET backend API.
    */
   async deleteResume(resume: Pick<Resume, 'id' | 'file_path'>): Promise<void> {
-    // 1. Soft delete database record
-    const { error } = await supabase
-      .from('resumes')
-      .update({
-        deleted_at: new Date().toISOString(),
-        is_primary: false,
-      })
-      .eq('id', resume.id)
-
-    if (error) {
-      console.error('Error deleting resume:', error.message)
-      throw error
-    }
-
-    // 2. Remove file from storage if present
-    if (resume.file_path) {
-      await deleteResumeFile(resume.file_path)
-    }
+    await api.delete<{ success: boolean }>(`resumes/${resume.id}`)
   },
 
   /**
-   * Obtain a download / preview signed URL for a stored resume.
+   * Obtain a download / preview signed URL via .NET backend API.
    */
   async getDownloadUrl(filePath: string, expiresIn = 3600): Promise<string | null> {
-    return getResumeSignedUrl(filePath, expiresIn)
+    try {
+      const response = await api.get<{ signedUrl: string }>('resumes/download-url', {
+        filePath,
+        expiresIn,
+      })
+      return response.signedUrl || null
+    } catch (error) {
+      console.error('Error getting download URL via API:', error)
+      return null
+    }
   },
 }
-

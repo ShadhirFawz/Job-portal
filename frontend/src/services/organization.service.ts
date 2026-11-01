@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import type {
   Organization,
   OrganizationCreateInput,
@@ -7,48 +7,33 @@ import type {
 
 export const organizationService = {
   /**
-   * Fetch an organization by ID.
+   * Fetch an organization by ID via .NET backend API.
    */
   async getOrganization(id: string): Promise<Organization | null> {
-    const { data, error } = await supabase
-      .from('organizations')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle()
-
-    if (error) {
-      console.error('Error fetching organization:', error)
+    if (!id) return null
+    try {
+      return await api.get<Organization>(`organizations/${id}`)
+    } catch (error) {
+      console.error('Error fetching organization via API:', error)
       return null
     }
-    return data as Organization
   },
 
   /**
-   * Fetch all organizations where the user is an active member.
+   * Fetch all organizations where the user is an active member via .NET backend API.
    */
   async getMyOrganizations(userId: string): Promise<Organization[]> {
-    const { data, error } = await supabase
-      .from('organization_members')
-      .select(`
-        role,
-        status,
-        organization:organizations (*)
-      `)
-      .eq('user_id', userId)
-      .eq('status', 'active')
-
-    if (error) {
-      console.error('Error fetching user organizations:', error)
+    if (!userId) return []
+    try {
+      return await api.get<Organization[]>(`organizations/user/${userId}`)
+    } catch (error) {
+      console.error('Error fetching user organizations via API:', error)
       return []
     }
-
-    return (data || [])
-      .map((item: any) => item.organization)
-      .filter(Boolean) as Organization[]
   },
 
   /**
-   * Check if a user is an OrgAdmin (creator, super_admin, or active org_admin member).
+   * Check if a user is an OrgAdmin via .NET backend API.
    */
   async checkIsOrgAdmin(
     orgId: string,
@@ -59,24 +44,24 @@ export const organizationService = {
     if (orgCreatedBy && orgCreatedBy === userId) return true
     if (userRole === 'super_admin') return true
 
-    const { data, error } = await supabase
-      .from('organization_members')
-      .select('role, status')
-      .eq('organization_id', orgId)
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .maybeSingle()
-
-    if (error) {
-      console.error('Error checking org_admin permissions:', error)
+    try {
+      const response = await api.get<{ isAdmin: boolean }>(
+        `organizations/${orgId}/is-admin`,
+        {
+          userId,
+          userRole,
+          orgCreatedBy,
+        }
+      )
+      return response.isAdmin
+    } catch (error) {
+      console.error('Error checking org_admin permissions via API:', error)
       return false
     }
-
-    return data?.role === 'org_admin'
   },
 
   /**
-   * Check if a user is an OrgAdmin or OrgStaff of an organization (creator, super_admin, or active org_admin/org_staff member).
+   * Check if a user is an OrgAdmin or OrgStaff via .NET backend API.
    */
   async checkIsOrgAdminOrStaff(
     orgId: string,
@@ -87,184 +72,72 @@ export const organizationService = {
     if (orgCreatedBy && orgCreatedBy === userId) return true
     if (userRole === 'super_admin') return true
 
-    const { data, error } = await supabase
-      .from('organization_members')
-      .select('role, status')
-      .eq('organization_id', orgId)
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .maybeSingle()
-
-    if (error) {
-      console.error('Error checking org permissions:', error)
+    try {
+      const response = await api.get<{ isStaff: boolean }>(
+        `organizations/${orgId}/is-staff`,
+        {
+          userId,
+          userRole,
+          orgCreatedBy,
+        }
+      )
+      return response.isStaff
+    } catch (error) {
+      console.error('Error checking org permissions via API:', error)
       return false
     }
-
-    return data?.role === 'org_admin' || data?.role === 'org_staff'
   },
 
   /**
-   * Create a new organization and assign the creator as active org_admin.
+   * Create a new organization and assign the creator as active org_admin via .NET backend API.
    */
   async createOrganization(
     input: OrganizationCreateInput,
     userId: string
   ): Promise<Organization> {
-    const { data: org, error: orgError } = await supabase
-      .from('organizations')
-      .insert({
-        name: input.name.trim(),
-        legal_name: input.legal_name?.trim() || null,
-        official_email: input.official_email.trim().toLowerCase(),
-        tagline: input.tagline?.trim() || null,
-        description: input.description?.trim() || null,
-        website_url: input.website_url?.trim() || null,
-        phone: input.phone?.trim() || null,
-        industry: input.industry?.trim() || null,
-        company_size: input.company_size || null,
-        founded_year: input.founded_year || null,
-        company_type: input.company_type?.trim() || null,
-        has_physical_office: !!input.has_physical_office,
-        country_code: input.country_code?.trim() || null,
-        state_province: input.state_province?.trim() || null,
-        city: input.city?.trim() || null,
-        postal_code: input.postal_code?.trim() || null,
-        address_line1: input.address_line1?.trim() || null,
-        address_line2: input.address_line2?.trim() || null,
-        latitude: input.latitude !== undefined ? input.latitude : null,
-        longitude: input.longitude !== undefined ? input.longitude : null,
-        avatar_path: input.avatar_path || null,
-        cover_path: input.cover_path || null,
-        created_by: userId,
-        status: 'pending_verification',
-      })
-      .select()
-      .single()
-
-    if (orgError) throw orgError
-
-    // Add creator as org_admin in organization_members
-    const { error: memberError } = await supabase
-      .from('organization_members')
-      .insert({
-        organization_id: org.id,
-        user_id: userId,
-        role: 'org_admin',
-        status: 'active',
-        joined_at: new Date().toISOString(),
-        title: 'Founder / Administrator',
-      })
-
-    if (memberError) {
-      console.warn('Could not auto-add creator to organization_members:', memberError)
-    }
-
-    return org as Organization
+    return await api.post<Organization>('organizations', input, { userId })
   },
 
   /**
-   * Update an existing organization.
+   * Update an existing organization via .NET backend API.
    */
   async updateOrganization(
     id: string,
     payload: OrganizationUpdateInput
   ): Promise<Organization> {
-    const { data, error } = await supabase
-      .from('organizations')
-      .update(payload)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) throw error
-    return data as Organization
+    return await api.put<Organization>(`organizations/${id}`, payload)
   },
 
   /**
-   * Generate an official email verification link.
+   * Generate an official email verification link via .NET backend API.
    */
   async createEmailVerificationToken(
     orgId: string,
     email: string,
     userId: string
   ): Promise<{ token: string; verifyUrl: string }> {
-    const token = crypto.randomUUID() + '-' + crypto.randomUUID()
-    const expiresAt = new Date()
-    expiresAt.setHours(expiresAt.getHours() + 24)
-
-    // Clear previous pending tokens
-    await supabase
-      .from('organization_email_verifications')
-      .delete()
-      .eq('organization_id', orgId)
-      .is('verified_at', null)
-
-    const { error } = await supabase
-      .from('organization_email_verifications')
-      .insert({
-        organization_id: orgId,
-        email: email.trim().toLowerCase(),
-        token,
-        expires_at: expiresAt.toISOString(),
-        created_by: userId,
-      })
-
-    if (error) throw error
-
-    const verifyUrl = `${window.location.origin}/organizations/verify-email?token=${token}`
-    return { token, verifyUrl }
+    return await api.post<{ token: string; verifyUrl: string }>(
+      `organizations/${orgId}/email-verification`,
+      {
+        email,
+        origin: window.location.origin,
+      },
+      { userId }
+    )
   },
 
   /**
-   * Verify an official email token.
+   * Verify an official email token via .NET backend API.
    */
   async verifyEmailToken(token: string): Promise<{
     organizationId: string
     organizationName: string
     officialEmail: string
   }> {
-    // 1. Fetch token record
-    const { data: verification, error } = await supabase
-      .from('organization_email_verifications')
-      .select('*, organization:organizations(id, name, official_email)')
-      .eq('token', token)
-      .is('verified_at', null)
-      .single()
-
-    if (error || !verification) {
-      throw new Error('Invalid or already used verification link.')
-    }
-
-    // 2. Check expiration
-    if (new Date(verification.expires_at) < new Date()) {
-      throw new Error('This verification link has expired. Please request a new one.')
-    }
-
-    // 3. Mark token verified
-    const { error: tokenErr } = await supabase
-      .from('organization_email_verifications')
-      .update({ verified_at: new Date().toISOString() })
-      .eq('id', verification.id)
-
-    if (tokenErr) throw tokenErr
-
-    // 4. Update organization official_email_verified
-    const { error: orgErr } = await supabase
-      .from('organizations')
-      .update({
-        official_email_verified: true,
-        status: 'active',
-        verified_at: new Date().toISOString(),
-      })
-      .eq('id', verification.organization_id)
-
-    if (orgErr) throw orgErr
-
-    return {
-      organizationId: verification.organization_id,
-      organizationName: verification.organization?.name || '',
-      officialEmail: verification.organization?.official_email || '',
-    }
+    return await api.post<{
+      organizationId: string
+      organizationName: string
+      officialEmail: string
+    }>('organizations/verify-email', { token })
   },
 }
-
