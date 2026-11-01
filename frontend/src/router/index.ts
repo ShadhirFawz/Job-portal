@@ -69,6 +69,11 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/jobs',
+      name: 'jobs-list',
+      component: () => import('@/views/jobs/JobsList.vue')
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/auth/Login.vue'),

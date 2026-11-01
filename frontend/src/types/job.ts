@@ -73,3 +73,23 @@ export interface Job {
   organization?: any
 }
 
+export interface JobFilterParams {
+  q?: string
+  type?: string
+  mode?: string
+  level?: string
+  location?: string
+  department?: string
+  page?: number
+  pageSize?: number
+}
+
+export interface PagedJobsResponse {
+  items: Job[]
+  totalCount: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+

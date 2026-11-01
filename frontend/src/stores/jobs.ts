@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { supabase } from '@/lib/supabase'
+import { jobService } from '@/services/job.service'
 import type { Job, SelectionProcess } from '@/types/job'
 
 export type { Job, SelectionProcess }
@@ -12,60 +12,19 @@ export const useJobsStore = defineStore('jobs', () => {
 
   async function fetchOrganizationJobs(organizationId: string) {
     loading.value = true
-    const { data, error } = await supabase
-      .from('jobs')
-      .select(`
-        *,
-        selection_processes:job_selection_processes (*)
-      `)
-      .eq('organization_id', organizationId)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-
-    if (!error) {
-      organizationJobs.value = data || []
-    }
+    organizationJobs.value = await jobService.fetchOrganizationJobs(organizationId)
     loading.value = false
   }
 
   async function fetchJob(id: string) {
     loading.value = true
-    const { data, error } = await supabase
-      .from('jobs')
-      .select(`
-        *,
-        selection_processes:job_selection_processes (*),
-        organization:organizations (id, name, slug, avatar_path, industry, city)
-      `)
-      .eq('id', id)
-      .single()
-
-    if (!error) {
-      currentJob.value = data
-    } else {
-      currentJob.value = null
-    }
+    currentJob.value = await jobService.fetchJobById(id, false)
     loading.value = false
   }
 
   async function fetchPublicJob(id: string) {
     loading.value = true
-    const { data, error } = await supabase
-      .from('jobs')
-      .select(`
-        *,
-        selection_processes:job_selection_processes (*),
-        organization:organizations (id, name, slug, avatar_path, industry, city, website_url)
-      `)
-      .eq('id', id)
-      .eq('status', 'published')
-      .single()
-
-    if (!error) {
-      currentJob.value = data
-    } else {
-      currentJob.value = null
-    }
+    currentJob.value = await jobService.fetchJobById(id, true)
     loading.value = false
   }
 
