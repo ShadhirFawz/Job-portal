@@ -22,43 +22,50 @@ public class JobService : IJobService
 
         var query = "jobs?status=eq.published&deleted_at=is.null";
 
+        var search = !string.IsNullOrWhiteSpace(filters.Search) ? filters.Search : filters.Q;
+        var jobType = !string.IsNullOrWhiteSpace(filters.JobType) ? filters.JobType : filters.Type;
+        var workMode = !string.IsNullOrWhiteSpace(filters.WorkMode) ? filters.WorkMode : filters.Mode;
+        var expLevel = !string.IsNullOrWhiteSpace(filters.ExperienceLevel) ? filters.ExperienceLevel : filters.Level;
+        var location = filters.Location;
+        var department = filters.Department;
+
         // Search query
-        if (!string.IsNullOrWhiteSpace(filters.Search))
+        if (!string.IsNullOrWhiteSpace(search))
         {
-            var rawSearch = filters.Search.Trim().Replace("(", "").Replace(")", "").Replace(",", " ");
+            var rawSearch = search.Trim().Replace("(", "").Replace(")", "").Replace(",", " ");
             var escaped = UrlEncoder.Default.Encode(rawSearch);
             query += $"&or=(title.ilike.*{escaped}*,short_description.ilike.*{escaped}*,description.ilike.*{escaped}*)";
         }
 
         // Job type
-        if (!string.IsNullOrWhiteSpace(filters.JobType))
+        if (!string.IsNullOrWhiteSpace(jobType))
         {
-            query += $"&job_type=eq.{filters.JobType.Trim()}";
+            query += $"&job_type=eq.{jobType.Trim()}";
         }
 
         // Work mode
-        if (!string.IsNullOrWhiteSpace(filters.WorkMode))
+        if (!string.IsNullOrWhiteSpace(workMode))
         {
-            query += $"&work_mode=eq.{filters.WorkMode.Trim()}";
+            query += $"&work_mode=eq.{workMode.Trim()}";
         }
 
         // Experience level
-        if (!string.IsNullOrWhiteSpace(filters.ExperienceLevel))
+        if (!string.IsNullOrWhiteSpace(expLevel))
         {
-            query += $"&experience_level=eq.{filters.ExperienceLevel.Trim()}";
+            query += $"&experience_level=eq.{expLevel.Trim()}";
         }
 
         // Department
-        if (!string.IsNullOrWhiteSpace(filters.Department))
+        if (!string.IsNullOrWhiteSpace(department))
         {
-            var dept = UrlEncoder.Default.Encode(filters.Department.Trim());
+            var dept = UrlEncoder.Default.Encode(department.Trim());
             query += $"&department=ilike.*{dept}*";
         }
 
         // Location
-        if (!string.IsNullOrWhiteSpace(filters.Location))
+        if (!string.IsNullOrWhiteSpace(location))
         {
-            var rawLoc = filters.Location.Trim().Replace("(", "").Replace(")", "").Replace(",", " ");
+            var rawLoc = location.Trim().Replace("(", "").Replace(")", "").Replace(",", " ");
             var escapedLoc = UrlEncoder.Default.Encode(rawLoc);
             query += $"&or=(city.ilike.*{escapedLoc}*,country_code.ilike.*{escapedLoc}*,state_province.ilike.*{escapedLoc}*)";
         }

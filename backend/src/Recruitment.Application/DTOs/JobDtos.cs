@@ -4,17 +4,50 @@ namespace Recruitment.Application.DTOs;
 
 public class JobFilterRequest
 {
+    private string? _search;
+    private string? _jobType;
+    private string? _workMode;
+    private string? _experienceLevel;
+
     [JsonPropertyName("q")]
-    public string? Search { get; set; }
+    public string? Q { get; set; }
+
+    [JsonPropertyName("search")]
+    public string? Search
+    {
+        get => !string.IsNullOrWhiteSpace(Q) ? Q : _search;
+        set => _search = value;
+    }
 
     [JsonPropertyName("type")]
-    public string? JobType { get; set; }
+    public string? Type { get; set; }
+
+    [JsonPropertyName("jobType")]
+    public string? JobType
+    {
+        get => !string.IsNullOrWhiteSpace(Type) ? Type : _jobType;
+        set => _jobType = value;
+    }
 
     [JsonPropertyName("mode")]
-    public string? WorkMode { get; set; }
+    public string? Mode { get; set; }
+
+    [JsonPropertyName("workMode")]
+    public string? WorkMode
+    {
+        get => !string.IsNullOrWhiteSpace(Mode) ? Mode : _workMode;
+        set => _workMode = value;
+    }
 
     [JsonPropertyName("level")]
-    public string? ExperienceLevel { get; set; }
+    public string? Level { get; set; }
+
+    [JsonPropertyName("experienceLevel")]
+    public string? ExperienceLevel
+    {
+        get => !string.IsNullOrWhiteSpace(Level) ? Level : _experienceLevel;
+        set => _experienceLevel = value;
+    }
 
     [JsonPropertyName("location")]
     public string? Location { get; set; }
