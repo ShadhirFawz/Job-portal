@@ -40,6 +40,24 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/organizations/:orgId/questions',
+      name: 'question-bank',
+      component: () => import('@/views/assessments/QuestionBank.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/organizations/:orgId/quizzes/create',
+      name: 'create-quiz',
+      component: () => import('@/views/assessments/QuizBuilder.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/organizations/:orgId/assessments',
+      name: 'assessments-home',
+      component: () => import('@/views/assessments/AssessmentsHome.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/jobs/:id',
       name: 'job-detail',
       component: () => import('@/views/jobs/JobDetail.vue')
@@ -48,6 +66,12 @@ const router = createRouter({
       path: '/jobs/:id/apply',
       name: 'apply-job',
       component: () => import('@/views/jobs/ApplyJob.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/jobs/:jobId/assessments/:processId',
+      name: 'take-quiz',
+      component: () => import('@/views/assessments/TakeQuiz.vue'),
       meta: { requiresAuth: true }
     },
     {

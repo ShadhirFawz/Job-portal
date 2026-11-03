@@ -27,6 +27,7 @@ import {
   ChevronRight,
   LucideFileUser,
   ArrowBigRightDash,
+  Layers,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationsStore } from '@/stores/organizations'
@@ -500,6 +501,15 @@ async function sendVerificationEmail() {
                 >
                   {{ humanizeStatus(org.status) }}
                 </span>
+
+                <router-link
+                  v-if="isOrgAdmin"
+                  :to="`/organizations/${org.id}/questions`"
+                  class="btn btn-secondary btn-sm"
+                >
+                  <Layers class="h-3.5 w-3.5" />
+                  Question Banks
+                </router-link>
 
                 <router-link
                   v-if="isOrgAdmin"

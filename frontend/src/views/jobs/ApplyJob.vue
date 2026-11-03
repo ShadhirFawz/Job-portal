@@ -55,6 +55,10 @@ function formatFileSize(bytes: number | null | undefined): string {
 
 const job = computed(() => jobsStore.currentJob)
 
+const quizProcess = computed(() => {
+  return job.value?.selection_processes?.find(p => p.process_type && p.process_type.includes('quiz'))
+})
+
 // Status & deadline checks
 const isDeadlinePassed = computed(() => {
   if (!job.value?.application_deadline) return false
@@ -163,16 +167,24 @@ async function handleApply() {
     alreadyApplied.value = true
     existingApplication.value = newApp
     successMsg.value = 'Your application has been submitted successfully!'
-    toast.success('Application submitted!')
 
     if (jobsStore.currentJob) {
       jobsStore.currentJob.applications_count =
         (jobsStore.currentJob.applications_count || 0) + 1
     }
 
-    setTimeout(() => {
-      router.push(`/jobs/${jobId}`)
-    }, 2000)
+    const targetQuiz = quizProcess.value
+    if (targetQuiz) {
+      toast.success('Application submitted! Taking you to the Stage Assessment...')
+      setTimeout(() => {
+        router.push(`/jobs/${jobId}/assessments/${targetQuiz.id}?appId=${newApp.id}`)
+      }, 1500)
+    } else {
+      toast.success('Application submitted!')
+      setTimeout(() => {
+        router.push(`/jobs/${jobId}`)
+      }, 2000)
+    }
   } catch (err: any) {
     errorMsg.value = err.message || 'Failed to submit application. Please try again.'
     toast.error(errorMsg.value)
@@ -337,13 +349,23 @@ async function handleApply() {
               </p>
             </div>
 
-            <div class="pt-1 sm:pt-2">
+            <div class="pt-1 sm:pt-2 flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 @click="router.push(`/jobs/${jobId}`)"
                 class="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 text-[11px] sm:text-xs font-semibold rounded-lg text-white bg-success hover:bg-success-hover transition"
               >
                 ← View Job Details
+              </button>
+
+              <button
+                v-if="quizProcess"
+                type="button"
+                @click="router.push(`/jobs/${jobId}/assessments/${quizProcess.id}?appId=${existingApplication?.id}`)"
+                class="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 text-[11px] sm:text-xs font-semibold rounded-lg text-white bg-primary hover:bg-primary-hover shadow-xs transition"
+              >
+                <span>Take Stage Assessment ({{ quizProcess.title || 'Quiz' }})</span>
+                <span>→</span>
               </button>
             </div>
           </div>
