@@ -163,6 +163,7 @@ public class JobService : IJobService
                 IsMandatory = sp.IsMandatory,
                 TimeLimitMinutes = sp.TimeLimitMinutes,
                 PassingScore = sp.PassingScore,
+                QuestionBankId = sp.QuestionBankId,
                 Config = sp.Config,
                 CreatedAt = sp.CreatedAt,
                 UpdatedAt = sp.UpdatedAt
