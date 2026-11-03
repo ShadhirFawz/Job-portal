@@ -109,7 +109,7 @@ function closeCancel() {
     >
       <div
         v-if="isOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overscroll-contain overflow-y-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
