@@ -16,10 +16,12 @@ import {
   RotateCcw
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
+import { useConfirm } from '@/composables/useConfirm'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const { confirm: showConfirm } = useConfirm()
 
 const jobId = route.params.jobId as string
 const processId = route.params.processId as string
@@ -148,7 +150,14 @@ async function submitQuiz(auto = false) {
 
   if (!auto && answeredCount.value < questions.value.length) {
     const unanswered = questions.value.length - answeredCount.value
-    if (!confirm(`You still have ${unanswered} unanswered question(s). Are you sure you want to submit?`)) {
+    const confirmed = await showConfirm({
+      title: 'Submit Assessment?',
+      message: `You still have ${unanswered} unanswered question(s).\n\nAre you sure you want to finish and submit your quiz now?`,
+      confirmLabel: 'Yes, Submit',
+      cancelLabel: 'Keep Reviewing',
+      variant: 'warning',
+    })
+    if (!confirmed) {
       return
     }
   }

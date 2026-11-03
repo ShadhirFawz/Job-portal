@@ -23,13 +23,15 @@ import {
   AlertCircle,
   Check,
   ChevronRight,
-  Sparkles
+  User2
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
+import { useConfirm } from '@/composables/useConfirm'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const { confirm: showConfirm } = useConfirm()
 
 const organizationId = route.params.orgId as string
 
@@ -171,7 +173,13 @@ async function deleteBank(bank: QuestionBank) {
     toast.error('Only the creator of this question bank can delete it.')
     return
   }
-  if (!confirm(`Are you sure you want to delete "${bank.name}" and all its questions?`)) return
+  const confirmed = await showConfirm({
+    title: 'Delete Question Bank?',
+    message: `Are you sure you want to delete "${bank.name}" and all of its questions? This action cannot be undone.`,
+    confirmLabel: 'Delete Bank',
+    variant: 'danger',
+  })
+  if (!confirmed) return
 
   try {
     await questionBankService.deleteBank(bank.id, auth.user!.id)
@@ -327,7 +335,13 @@ async function deleteQuestion(qId: string) {
     toast.error('Only the creator can delete questions from this bank.')
     return
   }
-  if (!confirm('Are you sure you want to delete this question?')) return
+  const confirmed = await showConfirm({
+    title: 'Delete Question?',
+    message: 'Are you sure you want to delete this question? This action cannot be undone.',
+    confirmLabel: 'Delete Question',
+    variant: 'danger',
+  })
+  if (!confirmed) return
 
   try {
     await questionBankService.deleteQuestion(qId, auth.user!.id)
@@ -445,14 +459,25 @@ function formatType(t: string): string {
                     {{ b.description }}
                   </p>
                 </div>
-                <ChevronRight class="h-4 w-4 text-text-subtle shrink-0 mt-0.5" />
+                <!-- Circular chevron badge -->
+                <span
+                  :class="[
+                    'h-8 w-8 rounded-full flex items-center justify-center shrink-0 border transition',
+                    selectedBank?.id === b.id
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-surface-raised border-border text-text-muted hover:bg-gray-800'
+                  ]"
+                  aria-hidden="true"
+                >
+                  <ChevronRight class="h-4 w-4" />
+                </span>
               </div>
 
               <!-- Bank Meta footer -->
               <div class="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-[11px] text-text-muted">
                 <span>{{ b.questions_count }} {{ b.questions_count === 1 ? 'question' : 'questions' }}</span>
                 <span v-if="isOwner(b)" class="font-medium text-primary flex items-center gap-1">
-                  <Sparkles class="h-3 w-3" /> Created by you
+                  <User2 class="h-3 w-3" /> Created by you
                 </span>
                 <span v-else class="text-text-subtle flex items-center gap-1">
                   <Lock class="h-3 w-3" /> {{ b.creator_name ? `By ${b.creator_name}` : 'Team Bank' }}
@@ -481,7 +506,7 @@ function formatType(t: string): string {
               <!-- Ownership note -->
               <div class="mt-2.5 flex items-center gap-2 text-xs">
                 <span v-if="isOwner(selectedBank)" class="inline-flex items-center gap-1 font-semibold text-primary">
-                  <CheckCircle class="h-3.5 w-3.5" /> You own this question bank (full edit permissions)
+                  <CheckCircle class="h-3.5 w-3.5" /> You own this question bank
                 </span>
                 <span v-else class="inline-flex items-center gap-1 text-text-muted">
                   <Lock class="h-3.5 w-3.5 text-amber-500" />

@@ -25,10 +25,12 @@ import {
   Send,
   Save,
 } from 'lucide-vue-next'
+import { useConfirm } from '@/composables/useConfirm'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const { confirm: showConfirm } = useConfirm()
 
 const organizationId = route.params.orgId as string
 
@@ -122,7 +124,17 @@ function addProcess() {
   })
 }
 
-function removeProcess(index: number) {
+async function removeProcess(index: number) {
+  const proc = processes.value[index]
+  if (proc && (proc.title || proc.question_bank_id)) {
+    const confirmed = await showConfirm({
+      title: 'Remove Stage?',
+      message: `Are you sure you want to remove "${proc.title || proc.process_type}"? Any configurations for this stage will be discarded.`,
+      confirmLabel: 'Remove Stage',
+      variant: 'danger',
+    })
+    if (!confirmed) return
+  }
   processes.value.splice(index, 1)
 }
 

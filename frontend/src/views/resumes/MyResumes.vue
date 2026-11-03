@@ -21,10 +21,12 @@ import {
   Info,
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
+import { useConfirm } from '@/composables/useConfirm'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const { confirm: showConfirm } = useConfirm()
 
 const redirectUrl = computed(() => (route.query.redirect as string) || null)
 
@@ -201,7 +203,13 @@ async function handleSetPrimary(resume: Resume) {
 }
 
 async function handleDelete(resume: Resume) {
-  if (!confirm(`Are you sure you want to delete "${resume.title}"?`)) return
+  const confirmed = await showConfirm({
+    title: 'Delete Resume?',
+    message: `Are you sure you want to delete "${resume.title}"? This cannot be undone.`,
+    confirmLabel: 'Delete Resume',
+    variant: 'danger',
+  })
+  if (!confirmed) return
 
   actionId.value = resume.id
   try {
