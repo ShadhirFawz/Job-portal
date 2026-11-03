@@ -8,10 +8,12 @@ namespace Recruitment.Infrastructure.Services;
 public class QuestionBankService : IQuestionBankService
 {
     private readonly ISupabaseContext _supabase;
+    private readonly IOrganizationService _organizationService;
 
-    public QuestionBankService(ISupabaseContext supabase)
+    public QuestionBankService(ISupabaseContext supabase, IOrganizationService organizationService)
     {
         _supabase = supabase;
+        _organizationService = organizationService;
     }
 
     public async Task<List<QuestionBankDto>> GetOrganizationBanksAsync(Guid organizationId)
@@ -78,10 +80,11 @@ public class QuestionBankService : IQuestionBankService
         var bank = await _supabase.GetSingleAsync<QuestionBank>($"question_banks?id=eq.{bankId}&deleted_at=is.null");
         if (bank == null) throw new KeyNotFoundException("Question bank not found.");
 
-        // Strict ownership check: only creator can modify!
-        if (bank.CreatedBy != userId)
+        var isCreator = bank.CreatedBy == userId;
+        var isOrgAdmin = await _organizationService.CheckIsOrgAdminAsync(bank.OrganizationId, userId);
+        if (!isCreator && !isOrgAdmin)
         {
-            throw new UnauthorizedAccessException("Only the creator of this question bank is authorized to modify it.");
+            throw new UnauthorizedAccessException("Only the creator of this question bank or an organization administrator can modify it.");
         }
 
         var updatePayload = new Dictionary<string, object>();
@@ -100,10 +103,11 @@ public class QuestionBankService : IQuestionBankService
         var bank = await _supabase.GetSingleAsync<QuestionBank>($"question_banks?id=eq.{bankId}&deleted_at=is.null");
         if (bank == null) throw new KeyNotFoundException("Question bank not found.");
 
-        // Strict ownership check: only creator can delete!
-        if (bank.CreatedBy != userId)
+        var isCreator = bank.CreatedBy == userId;
+        var isOrgAdmin = await _organizationService.CheckIsOrgAdminAsync(bank.OrganizationId, userId);
+        if (!isCreator && !isOrgAdmin)
         {
-            throw new UnauthorizedAccessException("Only the creator of this question bank is authorized to delete it.");
+            throw new UnauthorizedAccessException("Only the creator of this question bank or an organization administrator can delete it.");
         }
 
         await _supabase.UpdateAsync<QuestionBank>($"question_banks?id=eq.{bankId}", new
@@ -118,9 +122,11 @@ public class QuestionBankService : IQuestionBankService
         var bank = await _supabase.GetSingleAsync<QuestionBank>($"question_banks?id=eq.{bankId}&deleted_at=is.null");
         if (bank == null) throw new KeyNotFoundException("Question bank not found.");
 
-        if (bank.CreatedBy != userId)
+        var isCreator = bank.CreatedBy == userId;
+        var isOrgAdmin = await _organizationService.CheckIsOrgAdminAsync(bank.OrganizationId, userId);
+        if (!isCreator && !isOrgAdmin)
         {
-            throw new UnauthorizedAccessException("Only the creator of this question bank is authorized to add questions.");
+            throw new UnauthorizedAccessException("Only the creator of this question bank or an organization administrator can add questions.");
         }
 
         var newQ = new
@@ -149,9 +155,13 @@ public class QuestionBankService : IQuestionBankService
         if (question == null) throw new KeyNotFoundException("Question not found.");
 
         var bank = await _supabase.GetSingleAsync<QuestionBank>($"question_banks?id=eq.{question.BankId}&deleted_at=is.null");
-        if (bank == null || bank.CreatedBy != userId)
+        if (bank == null) throw new KeyNotFoundException("Question bank not found.");
+
+        var isCreator = bank.CreatedBy == userId;
+        var isOrgAdmin = await _organizationService.CheckIsOrgAdminAsync(bank.OrganizationId, userId);
+        if (!isCreator && !isOrgAdmin)
         {
-            throw new UnauthorizedAccessException("Only the creator of this question bank is authorized to modify its questions.");
+            throw new UnauthorizedAccessException("Only the creator of this question bank or an organization administrator can modify its questions.");
         }
 
         var payload = new Dictionary<string, object>();
@@ -175,14 +185,19 @@ public class QuestionBankService : IQuestionBankService
         if (question == null) throw new KeyNotFoundException("Question not found.");
 
         var bank = await _supabase.GetSingleAsync<QuestionBank>($"question_banks?id=eq.{question.BankId}&deleted_at=is.null");
-        if (bank == null || bank.CreatedBy != userId)
+        if (bank == null) throw new KeyNotFoundException("Question bank not found.");
+
+        var isCreator = bank.CreatedBy == userId;
+        var isOrgAdmin = await _organizationService.CheckIsOrgAdminAsync(bank.OrganizationId, userId);
+        if (!isCreator && !isOrgAdmin)
         {
-            throw new UnauthorizedAccessException("Only the creator of this question bank is authorized to delete questions.");
+            throw new UnauthorizedAccessException("Only the creator of this question bank or an organization administrator can delete questions.");
         }
 
         await _supabase.UpdateAsync<Question>($"questions?id=eq.{questionId}", new
         {
-            deleted_at = DateTime.UtcNow
+            deleted_at = DateTime.UtcNow,
+            updated_by = userId
         });
     }
 

@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { questionBankService } from '@/services/questionBank.service'
+import { organizationService } from '@/services/organization.service'
 import type {
   QuestionBank,
   Question,
@@ -68,14 +69,25 @@ const qPoints = ref(1)
 const savingQuestion = ref(false)
 const questionError = ref('')
 
-// Check ownership
+// Check ownership or OrgAdmin privileges
+const isOrgAdmin = ref(false)
+
+async function checkAdminStatus() {
+  if (!auth.user || !organizationId) return
+  try {
+    isOrgAdmin.value = await organizationService.checkIsOrgAdmin(organizationId, auth.user.id)
+  } catch {
+    isOrgAdmin.value = false
+  }
+}
+
 function isOwner(bank: QuestionBank | null): boolean {
   if (!bank || !auth.user) return false
-  return bank.created_by === auth.user.id
+  return bank.created_by === auth.user.id || isOrgAdmin.value
 }
 
 onMounted(async () => {
-  await fetchBanks()
+  await Promise.all([fetchBanks(), checkAdminStatus()])
   if (isCreateQuery.value) {
     openCreateBank()
   }
