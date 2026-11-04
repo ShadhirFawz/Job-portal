@@ -63,6 +63,12 @@ const router = createRouter({
       component: () => import('@/views/jobs/JobDetail.vue')
     },
     {
+      path: '/jobs/:id/edit',
+      name: 'edit-job',
+      component: () => import('@/views/jobs/EditJob.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/jobs/:id/apply',
       name: 'apply-job',
       component: () => import('@/views/jobs/ApplyJob.vue'),

@@ -62,5 +62,19 @@ export const jobService = {
       return []
     }
   },
+
+  /**
+   * Update an existing job posting (only allowed by the job post creator/owner).
+   */
+  async updateJob(id: string, userId: string, payload: UpdateJobPayload): Promise<Job> {
+    return await api.put<Job>(`jobs/${id}`, payload, { userId })
+  },
+
+  /**
+   * Publish a draft job posting (only allowed by the job post creator/owner).
+   */
+  async publishJob(id: string, userId: string): Promise<Job> {
+    return await api.post<Job>(`jobs/${id}/publish`, {}, { userId })
+  },
 }
 
