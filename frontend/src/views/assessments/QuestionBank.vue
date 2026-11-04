@@ -24,7 +24,8 @@ import {
   AlertCircle,
   Check,
   ChevronRight,
-  User2
+  User2,
+  GripHorizontal
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { useConfirm } from '@/composables/useConfirm'
@@ -68,6 +69,11 @@ const qDifficulty = ref<DifficultyLevel>('medium')
 const qPoints = ref(1)
 const savingQuestion = ref(false)
 const questionError = ref('')
+
+// Drag-and-drop reorder state
+const draggingId = ref<string | null>(null)
+const dragOverId = ref<string | null>(null)
+const isDragging = computed(() => draggingId.value !== null)
 
 // Check ownership or OrgAdmin privileges
 const isOrgAdmin = ref(false)
@@ -373,6 +379,107 @@ function formatType(t: string): string {
   }
   return map[t] || t.replace('_', ' ')
 }
+
+/**
+ * Returns the short badge label that appears inside the option's circular
+ * indicator. Regular options use their letter (A/B/C…). True/False options
+ * use a single letter (T/F) so their multi-character id ("true"/"false")
+ * doesn't overflow the 16px dot and bleed out as visible text.
+ */
+function optionBadge(opt: QuestionOption): string {
+  const id = (opt.id || '').toLowerCase()
+  if (id === 'true') return 'T'
+  if (id === 'false') return 'F'
+  return id.toUpperCase()
+}
+
+// ----------------------------------------------------
+// QUESTION DRAG & DROP REORDER
+// ----------------------------------------------------
+function onDragStart(q: Question, e: DragEvent) {
+  if (!selectedBank.value || !isOwner(selectedBank.value)) {
+    e.preventDefault()
+    return
+  }
+  draggingId.value = q.id
+  dragOverId.value = null
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', q.id)
+  }
+}
+
+function onDragOver(target: Question, e: DragEvent) {
+  if (!isDragging.value) return
+  if (target.id === draggingId.value) return
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  if (dragOverId.value !== target.id) {
+    dragOverId.value = target.id
+  }
+}
+
+function onDragLeave(target: Question) {
+  if (dragOverId.value === target.id) {
+    dragOverId.value = null
+  }
+}
+
+function resetDragState() {
+  draggingId.value = null
+  dragOverId.value = null
+}
+
+async function onDrop(target: Question) {
+  if (!selectedBank.value || !draggingId.value) {
+    resetDragState()
+    return
+  }
+
+  const questions = selectedBank.value.questions
+  if (!questions || questions.length === 0) {
+    resetDragState()
+    return
+  }
+
+  const fromIdx = questions.findIndex(q => q.id === draggingId.value)
+  const toIdx = questions.findIndex(q => q.id === target.id)
+
+  resetDragState()
+
+  if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return
+
+  const reordered = [...questions]
+  const [moved] = reordered.splice(fromIdx, 1)
+  reordered.splice(toIdx, 0, moved)
+  selectedBank.value.questions = reordered
+
+  await persistQuestionOrder(reordered)
+}
+
+async function persistQuestionOrder(questions: Question[]) {
+  if (!auth.user || !selectedBank.value) return
+  try {
+    await Promise.all(
+      questions.map((q, idx) =>
+        questionBankService.updateQuestion(q.id, auth.user!.id, {
+          body: q.body,
+          question_type: q.question_type,
+          options: q.options || [],
+          correct_answer: q.correct_answer || undefined,
+          explanation: q.explanation || undefined,
+          difficulty: q.difficulty || 'medium',
+          points: q.points || 1,
+          order_index: idx
+        })
+      )
+    )
+    toast.success('Question order updated')
+  } catch (err: any) {
+    toast.error(err.message || 'Failed to save the new question order')
+    await fetchBanks()
+  }
+}
 </script>
 
 <template>
@@ -535,7 +642,7 @@ function formatType(t: string): string {
                   @click="openEditBank(selectedBank)"
                   class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card hover:bg-surface-raised text-text-strong transition"
                 >
-                  <Edit2 class="h-3.5 w-3.5" />
+                  <Edit2 class="h-3 w-3" />
                   <span>Edit Bank</span>
                 </button>
                 <button
@@ -561,6 +668,9 @@ function formatType(t: string): string {
               </h3>
               <p class="text-xs text-text-muted">
                 Total Assessment Points: <strong>{{ selectedBank.total_points }} pts</strong>
+                <span v-if="isOwner(selectedBank) && (selectedBank.questions?.length || 0) > 1" class="ml-2 text-text-subtle">
+                  · Drag <GripHorizontal class="inline h-3 w-3 -mt-0.5" /> to reorder
+                </span>
               </p>
             </div>
 
@@ -597,7 +707,21 @@ function formatType(t: string): string {
             <div
               v-for="(q, qIndex) in selectedBank.questions"
               :key="q.id"
-              class="border border-border rounded-xl p-4 bg-surface-raised space-y-3 transition"
+              :draggable="isOwner(selectedBank)"
+              @dragstart="onDragStart(q, $event)"
+              @dragover="onDragOver(q, $event)"
+              @dragleave="onDragLeave(q)"
+              @dragend="resetDragState"
+              @drop.prevent="onDrop(q)"
+              :class="[
+                'border rounded-xl p-4 bg-surface-raised space-y-3 transition-all duration-150',
+                draggingId === q.id
+                  ? 'opacity-40 border-border'
+                  : 'border-border',
+                dragOverId === q.id && draggingId !== q.id
+                  ? 'ring-2 ring-primary/60 border-primary'
+                  : ''
+              ]"
             >
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
@@ -618,8 +742,15 @@ function formatType(t: string): string {
                   </p>
                 </div>
 
-                <!-- Question item edit/delete actions -->
+                <!-- Question item drag handle + edit/delete actions -->
                 <div v-if="isOwner(selectedBank)" class="flex items-center gap-1 shrink-0">
+                  <span
+                    class="p-1.5 text-text-muted hover:text-text-strong hover:bg-card rounded-md transition cursor-grab active:cursor-grabbing select-none"
+                    title="Drag to reorder"
+                    aria-label="Drag to reorder question"
+                  >
+                    <GripHorizontal class="h-4 w-4" />
+                  </span>
                   <button
                     type="button"
                     @click="openEditQuestion(q)"
@@ -639,44 +770,49 @@ function formatType(t: string): string {
                 </div>
               </div>
 
-              <!-- Options preview for MCQ / True False -->
-              <div v-if="q.question_type !== 'structured' && q.options && q.options.length > 0" class="space-y-1.5 pt-1">
-                <div
-                  v-for="opt in q.options"
-                  :key="opt.id"
-                  :class="[
-                    'flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-lg border',
-                    opt.is_correct
-                      ? 'bg-success-bg/40 border-success-border text-success-text font-medium'
-                      : 'bg-card border-border text-text-secondary'
-                  ]"
-                >
-                  <span class="h-4 w-4 rounded-full flex items-center justify-center text-[10px] font-bold"
-                    :class="opt.is_correct ? 'bg-success-text text-white' : 'bg-surface-raised border border-border text-text-muted'">
-                    {{ opt.id.toUpperCase() }}
-                  </span>
-                  <span class="flex-1 truncate">{{ opt.text }}</span>
-                  <span v-if="opt.is_correct" class="text-[10px] font-bold uppercase tracking-wider text-success-text">
-                    Correct Answer
-                  </span>
+              <!-- Options / Structured / Explanation — hidden while dragging so only question text is visible -->
+              <template v-if="!isDragging">
+                <!-- Options preview for MCQ / True False -->
+                <div v-if="q.question_type !== 'structured' && q.options && q.options.length > 0" class="space-y-1.5 pt-1">
+                  <div
+                    v-for="opt in q.options"
+                    :key="opt.id"
+                    :class="[
+                      'flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-lg border',
+                      opt.is_correct
+                        ? 'bg-success-bg/40 border-success-border text-success-text font-medium'
+                        : 'bg-card border-border text-text-secondary'
+                    ]"
+                  >
+                    <span
+                      class="h-4 w-4 shrink-0 rounded-full flex items-center justify-center text-[10px] font-bold leading-none"
+                      :class="opt.is_correct ? 'bg-success-text text-white' : 'bg-surface-raised border border-border text-text-muted'"
+                    >
+                      {{ optionBadge(opt) }}
+                    </span>
+                    <span class="flex-1 truncate">{{ opt.text }}</span>
+                    <span v-if="opt.is_correct" class="text-[10px] font-bold uppercase tracking-wider text-success-text">
+                      Correct Answer
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              <!-- Structured note -->
-              <div v-else-if="q.question_type === 'structured'" class="p-2.5 rounded-lg bg-card border border-border text-xs text-text-muted">
-                <div class="flex items-center gap-1.5 text-text-strong font-medium mb-0.5">
-                  <FileText class="h-3.5 w-3.5 text-primary" />
-                  <span>Structured Written Response</span>
+                <!-- Structured note -->
+                <div v-else-if="q.question_type === 'structured'" class="p-2.5 rounded-lg bg-card border border-border text-xs text-text-muted">
+                  <div class="flex items-center gap-1.5 text-text-strong font-medium mb-0.5">
+                    <FileText class="h-3.5 w-3.5 text-primary" />
+                    <span>Structured Written Response</span>
+                  </div>
+                  <span>Candidate provides open-ended formatted text. No fixed options.</span>
+                  <p v-if="q.correct_answer" class="mt-1.5 text-[11px] text-text-secondary bg-surface-raised p-2 rounded border border-border">
+                    <strong>Model answer / rubrics:</strong> {{ q.correct_answer }}
+                  </p>
                 </div>
-                <span>Candidate provides open-ended formatted text. No fixed options.</span>
-                <p v-if="q.correct_answer" class="mt-1.5 text-[11px] text-text-secondary bg-surface-raised p-2 rounded border border-border">
-                  <strong>Model answer / rubrics:</strong> {{ q.correct_answer }}
-                </p>
-              </div>
 
-              <div v-if="q.explanation" class="text-[11px] text-text-muted italic pt-1 border-t border-border">
-                Note: {{ q.explanation }}
-              </div>
+                <div v-if="q.explanation" class="text-[11px] text-text-muted italic pt-1 border-t border-border">
+                  Note: {{ q.explanation }}
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -852,7 +988,7 @@ function formatType(t: string): string {
                   ]"
                   :title="qType === 'single_choice' ? 'Mark as correct' : 'Toggle correct'"
                 >
-                  <Check class="h-3.5 w-3.5 stroke-[3]" />
+                  <Check class="h-3.5 w-3.5 stroke-3" />
                 </button>
 
                 <span class="text-xs font-bold text-text-muted uppercase w-4 text-center">
