@@ -11,19 +11,23 @@ import RichTextEditor from '@/components/ui/RichTextEditor.vue'
 import {
   Briefcase,
   Layers,
-  FileText,
-  DollarSign,
-  MapPin,
-  Clock,
   Sparkles,
+  Gift,
+  Code2,
+  HelpCircle,
+  Eye,
+  EyeOff,
   Plus,
-  Trash2,
-  AlertCircle,
-  Loader2,
+  X,
   ArrowLeft,
-  Save,
+  CheckCircle2,
+  Check,
+  DollarSign,
   Send,
+  Save,
   ShieldAlert,
+  Loader2,
+  AlertCircle,
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
@@ -43,7 +47,7 @@ const job = ref<Job | null>(null)
 const questionBanks = ref<QuestionBank[]>([])
 const loadingBanks = ref(false)
 
-// Form fields
+// Job basic fields
 const title = ref('')
 const shortDescription = ref('')
 const description = ref('')
@@ -53,169 +57,70 @@ const niceToHave = ref('')
 const whatWeOffer = ref('')
 const benefits = ref('')
 
+// Tech Stacks
 const techStacks = ref<string[]>([])
-const techStackInput = ref('')
-const commonTechStacks = [
+const newTechInput = ref('')
+
+const popularTechStacks = [
   'TypeScript', 'JavaScript', 'Vue.js', 'React', 'Node.js',
   'Python', 'Go', 'Java', 'C# / .NET', 'PostgreSQL',
   'Docker', 'Kubernetes', 'AWS', 'GCP', 'Tailwind CSS',
 ]
 
-const hasCustomHiringProcess = ref(false)
-const howToApply = ref('')
-const isSelectionProcessPublic = ref(true)
-
-interface FormProcess {
-  id?: string
-  title: string
-  process_type: string
-  description: string
-  is_mandatory: boolean
-  time_limit_minutes: number | null
-  question_bank_id: string | null
-}
-
-const processes = ref<FormProcess[]>([])
-
-const jobType = ref<JobType>('full_time')
-const workMode = ref<WorkMode>('onsite')
-const experienceLevel = ref<ExperienceLevel | ''>('mid')
-const department = ref('')
-const category = ref('')
-const countryCode = ref('')
-const city = ref('')
-
-const salaryMin = ref<number | null>(null)
-const salaryMax = ref<number | null>(null)
-const salaryCurrency = ref('INR')
-const showSalary = ref(false)
-
-const applicationDeadline = ref('')
-const acceptApplications = ref(true)
-const jobStatus = ref('draft')
-
-const isOwner = computed(() => {
-  if (!auth.user || !job.value) return false
-  return job.value.created_by === auth.user.id
-})
-
-onMounted(async () => {
-  if (!jobId) {
-    loadingJob.value = false
-    return
-  }
-
-  try {
-    const fetched = await jobService.fetchJobById(jobId, false)
-    if (!fetched) {
-      errorMsg.value = 'Job posting not found.'
-      return
-    }
-
-    job.value = fetched
-
-    // Check ownership
-    if (fetched.created_by !== auth.user?.id) {
-      errorMsg.value = 'Unauthorized: Only the creator of this job posting can edit it.'
-      return
-    }
-
-    // Populate form
-    title.value = fetched.title || ''
-    shortDescription.value = fetched.short_description || ''
-    description.value = fetched.description || ''
-    responsibilities.value = fetched.responsibilities || ''
-    requirements.value = fetched.requirements || ''
-    niceToHave.value = fetched.nice_to_have || ''
-    whatWeOffer.value = fetched.what_we_offer || fetched.benefits || ''
-    benefits.value = fetched.benefits || ''
-
-    techStacks.value = fetched.tech_stacks || []
-
-    hasCustomHiringProcess.value = !!fetched.has_custom_hiring_process
-    howToApply.value = fetched.how_to_apply || ''
-    isSelectionProcessPublic.value = fetched.is_selection_process_public !== false
-
-    jobType.value = (fetched.job_type as JobType) || 'full_time'
-    workMode.value = (fetched.work_mode as WorkMode) || 'onsite'
-    experienceLevel.value = (fetched.experience_level as ExperienceLevel) || ''
-    department.value = fetched.department || ''
-    category.value = fetched.category || ''
-    countryCode.value = fetched.country_code || ''
-    city.value = fetched.city || ''
-
-    salaryMin.value = fetched.salary_min ?? null
-    salaryMax.value = fetched.salary_max ?? null
-    salaryCurrency.value = fetched.salary_currency || 'INR'
-    showSalary.value = !!fetched.show_salary
-
-    if (fetched.application_deadline) {
-      try {
-        applicationDeadline.value = fetched.application_deadline.split('T')[0] ?? ''
-      } catch {
-        applicationDeadline.value = ''
-      }
-    }
-    acceptApplications.value = fetched.accept_applications !== false
-    jobStatus.value = fetched.status || 'draft'
-
-    // Populate selection processes
-    if (fetched.selection_processes && fetched.selection_processes.length > 0) {
-      processes.value = fetched.selection_processes
-        .slice()
-        .sort((a, b) => a.order_index - b.order_index)
-        .map(p => ({
-          id: p.id,
-          title: p.title || '',
-          process_type: p.process_type || 'screening',
-          description: p.description || '',
-          is_mandatory: p.is_mandatory !== false,
-          time_limit_minutes: p.time_limit_minutes ?? null,
-          question_bank_id: p.question_bank_id || (p.config?.question_bank_id as string) || null,
-        }))
-    } else if (!hasCustomHiringProcess.value) {
-      processes.value = [
-        {
-          title: 'Resume Screening',
-          process_type: 'screening',
-          description: 'Initial review of candidate experience and qualifications.',
-          is_mandatory: true,
-          time_limit_minutes: null,
-          question_bank_id: null,
-        }
-      ]
-    }
-
-    // Load organization question banks
-    if (fetched.organization_id) {
-      loadingBanks.value = true
-      try {
-        questionBanks.value = await questionBankService.getOrganizationBanks(fetched.organization_id)
-      } catch (err) {
-        console.error('Failed to load question banks:', err)
-      } finally {
-        loadingBanks.value = false
-      }
-    }
-  } catch (err: any) {
-    errorMsg.value = err.message || 'Failed to load job posting'
-  } finally {
-    loadingJob.value = false
-  }
-})
-
-function addTechStack(tag?: string) {
-  const val = (tag || techStackInput.value).trim()
+function addTechStack(name?: string) {
+  const val = (name || newTechInput.value).trim()
   if (!val) return
   if (!techStacks.value.includes(val)) {
     techStacks.value.push(val)
   }
-  techStackInput.value = ''
+  newTechInput.value = ''
 }
 
 function removeTechStack(index: number) {
   techStacks.value.splice(index, 1)
 }
+
+// Classification & location
+const jobType = ref<JobType>('full_time')
+const workMode = ref<WorkMode>('onsite')
+const experienceLevel = ref<ExperienceLevel | ''>('')
+const department = ref('')
+const category = ref('')
+const city = ref('')
+const countryCode = ref('')
+
+// Compensation
+const salaryMin = ref<number | null>(null)
+const salaryMax = ref<number | null>(null)
+const salaryCurrency = ref('LKR')
+const showSalary = ref(false)
+const applicationDeadline = ref('')
+const acceptApplications = ref(true)
+
+// Hiring Process Selection
+const hasCustomHiringProcess = ref(false)
+const howToApply = ref('')
+
+// Selection Process Visibility
+const isSelectionProcessPublic = ref(true)
+
+// Job status (for showing publish button when draft)
+const jobStatus = ref('draft')
+
+// Built-in Selection Processes (max 3)
+const processes = ref<
+  Array<{
+    id?: string
+    title: string
+    process_type: string
+    description: string
+    is_mandatory: boolean
+    time_limit_minutes: number | null
+    question_bank_id?: string | null
+  }>
+>([])
+
+const canAddProcess = computed(() => processes.value.length < 3)
 
 function addProcess() {
   if (processes.value.length >= 3) return
@@ -243,14 +148,111 @@ async function removeProcess(index: number) {
   processes.value.splice(index, 1)
 }
 
-async function saveJob(publish = false) {
+// Ownership check
+const isOwner = computed(() => {
+  if (!auth.user || !job.value) return false
+  return job.value.created_by === auth.user.id
+})
+
+onMounted(async () => {
+  if (!jobId) {
+    errorMsg.value = 'Job ID not provided.'
+    loadingJob.value = false
+    return
+  }
+
+  try {
+    const fetched = await jobService.fetchJobById(jobId, false)
+    if (!fetched) {
+      errorMsg.value = 'Job posting not found.'
+      loadingJob.value = false
+      return
+    }
+
+    job.value = fetched
+
+    // Check ownership
+    if (fetched.created_by !== auth.user?.id) {
+      loadingJob.value = false
+      return
+    }
+
+    // Populate form fields
+    title.value = fetched.title || ''
+    shortDescription.value = fetched.short_description || ''
+    description.value = fetched.description || ''
+    responsibilities.value = fetched.responsibilities || ''
+    requirements.value = fetched.requirements || ''
+    niceToHave.value = fetched.nice_to_have || ''
+    whatWeOffer.value = fetched.what_we_offer || fetched.benefits || ''
+    benefits.value = fetched.benefits || ''
+
+    techStacks.value = fetched.tech_stacks || []
+
+    hasCustomHiringProcess.value = !!fetched.has_custom_hiring_process
+    howToApply.value = fetched.how_to_apply || ''
+    isSelectionProcessPublic.value = fetched.is_selection_process_public !== false
+
+    jobType.value = (fetched.job_type as JobType) || 'full_time'
+    workMode.value = (fetched.work_mode as WorkMode) || 'onsite'
+    experienceLevel.value = (fetched.experience_level as ExperienceLevel) || ''
+    department.value = fetched.department || ''
+    category.value = fetched.category || ''
+    countryCode.value = fetched.country_code || ''
+    city.value = fetched.city || ''
+
+    salaryMin.value = fetched.salary_min ?? null
+    salaryMax.value = fetched.salary_max ?? null
+    salaryCurrency.value = fetched.salary_currency || 'LKR'
+    showSalary.value = !!fetched.show_salary
+
+    if (fetched.application_deadline) {
+      applicationDeadline.value = fetched.application_deadline.split('T')[0] ?? ''
+    }
+    acceptApplications.value = fetched.accept_applications !== false
+    jobStatus.value = fetched.status || 'draft'
+
+    // Populate selection processes
+    if (fetched.selection_processes && fetched.selection_processes.length > 0) {
+      processes.value = fetched.selection_processes
+        .slice()
+        .sort((a, b) => a.order_index - b.order_index)
+        .map(p => ({
+          id: p.id,
+          title: p.title || '',
+          process_type: p.process_type || 'screening',
+          description: p.description || '',
+          is_mandatory: p.is_mandatory !== false,
+          time_limit_minutes: p.time_limit_minutes ?? null,
+          question_bank_id: p.question_bank_id || (p.config?.question_bank_id as string) || null,
+        }))
+    }
+
+    // Load organization question banks
+    if (fetched.organization_id) {
+      loadingBanks.value = true
+      try {
+        questionBanks.value = await questionBankService.getOrganizationBanks(fetched.organization_id)
+      } catch (err) {
+        console.error('Failed to load question banks:', err)
+      } finally {
+        loadingBanks.value = false
+      }
+    }
+  } catch (err: any) {
+    errorMsg.value = err.message || 'Failed to load job posting'
+  } finally {
+    loadingJob.value = false
+  }
+})
+
+async function handleSubmit(publish = false) {
+  if (!auth.user || !job.value) return
   if (!title.value.trim()) {
     errorMsg.value = 'Job title is required'
     toast.error('Job title is required')
     return
   }
-
-  if (!auth.user || !job.value) return
 
   saving.value = true
   errorMsg.value = ''
@@ -319,12 +321,15 @@ async function saveJob(publish = false) {
         <p class="text-sm">Loading job posting details…</p>
       </div>
 
-      <!-- Access Denied or Not Found State -->
-      <div v-else-if="!isOwner" class="p-8 sm:p-12 text-center bg-card rounded-2xl border border-border shadow-sm space-y-4">
-        <ShieldAlert class="h-12 w-12 text-rose-500 mx-auto" />
+      <!-- Access Denied / Not Found State -->
+      <div
+        v-else-if="!isOwner"
+        class="p-8 sm:p-12 text-center bg-card rounded-2xl border border-border shadow-sm space-y-4"
+      >
+        <ShieldAlert class="h-12 w-12 text-danger mx-auto" />
         <h2 class="text-lg sm:text-xl font-bold text-text-strong">Access Denied</h2>
         <p class="text-sm text-text-muted max-w-md mx-auto">
-          {{ errorMsg || 'You do not have permission to edit this job posting. Only the owner/creator can make changes.' }}
+          {{ errorMsg || 'You do not have permission to edit this job posting. Only the creator of this job post can make changes.' }}
         </p>
         <div class="pt-2">
           <button
@@ -337,32 +342,29 @@ async function saveJob(publish = false) {
         </div>
       </div>
 
-      <!-- Form Content -->
-      <div v-else class="space-y-6 sm:space-y-8">
-
-        <!-- Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
-          <div>
-            <div class="flex items-center gap-2 mb-1.5">
-              <button
-                type="button"
-                @click="router.push(`/jobs/${jobId}`)"
-                class="inline-flex items-center gap-1 text-xs font-semibold text-text-muted hover:text-text-strong transition"
-              >
-                <ArrowLeft class="h-3.5 w-3.5" /> Back to Job Details
-              </button>
+      <!-- Form Content (only when owner is confirmed) -->
+      <template v-else>
+        <!-- HEADER SECTION -->
+        <div class="mb-4 sm:mb-8">
+          <button
+            type="button"
+            @click="router.push(`/jobs/${jobId}`)"
+            class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-text-muted hover:text-text-strong transition-colors mb-3 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-md"
+          >
+            <ArrowLeft class="h-4 w-4" /> Back to Job Details
+          </button>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-text-strong">
+                Edit Job Posting
+              </h1>
+              <p class="text-xs sm:text-sm lg:text-base text-text-secondary mt-1.5 leading-relaxed">
+                Update position details, requirements, compensation, and your hiring pathway.
+              </p>
             </div>
-            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-text-strong">
-              Edit Job Posting
-            </h1>
-            <p class="text-xs sm:text-sm text-text-secondary mt-1">
-              Update position details, requirements, and evaluation stages.
-            </p>
-          </div>
-
-          <div class="flex items-center gap-2">
+            <!-- Status badge -->
             <span
-              class="px-2.5 py-1 text-xs font-semibold rounded-full capitalize border"
+              class="px-3 py-1 text-xs font-semibold rounded-full capitalize border self-start sm:self-center"
               :class="{
                 'badge-success': jobStatus === 'published',
                 'badge-neutral': jobStatus === 'draft',
@@ -375,556 +377,646 @@ async function saveJob(publish = false) {
           </div>
         </div>
 
-        <!-- Alert messages -->
-        <div v-if="errorMsg" class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs sm:text-sm flex items-center gap-2">
-          <AlertCircle class="h-4 w-4 flex-shrink-0" />
-          <span>{{ errorMsg }}</span>
-        </div>
-
-        <!-- Form Card 1: Basic Information -->
-        <div class="bg-card rounded-xl sm:rounded-2xl border border-border p-5 sm:p-7 shadow-xs space-y-5">
-          <div class="flex items-center gap-2.5 border-b border-border pb-3">
-            <Briefcase class="h-5 w-5 text-primary flex-shrink-0" />
-            <h2 class="text-base sm:text-lg font-bold text-text-strong">Basic Job Details</h2>
+        <form @submit.prevent class="space-y-6 sm:space-y-8">
+          <!-- ERROR MESSAGE ALERT -->
+          <div
+            v-if="errorMsg"
+            role="alert"
+            class="alert alert-error p-3.5 sm:p-4 text-xs sm:text-sm rounded-xl flex items-center gap-2 border border-danger/30 bg-danger/10 text-danger"
+          >
+            <AlertCircle class="h-4 w-4 flex-shrink-0" />
+            <span class="font-medium">{{ errorMsg }}</span>
           </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-              Job Title <span class="text-rose-500">*</span>
-            </label>
-            <input
-              v-model="title"
-              type="text"
-              placeholder="e.g. Senior Full-Stack Engineer"
-              class="w-full rounded-lg border border-border bg-page px-3.5 py-2.5 text-xs sm:text-sm text-text-strong placeholder:text-text-subtle focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-            />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-              Short Summary
-            </label>
-            <textarea
-              v-model="shortDescription"
-              rows="2"
-              maxlength="250"
-              placeholder="A concise 1-2 sentence hook highlighting the role."
-              class="w-full rounded-lg border border-border bg-page px-3.5 py-2.5 text-xs sm:text-sm text-text-strong placeholder:text-text-subtle focus:border-primary focus:ring-1 focus:ring-primary shadow-xs resize-none"
-            ></textarea>
-            <div class="text-right text-[11px] text-text-subtle mt-1">{{ shortDescription.length }}/250</div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-                Employment Type
-              </label>
-              <select
-                v-model="jobType"
-                class="w-full rounded-lg border border-border bg-page px-3 py-2 text-xs sm:text-sm text-text-strong focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-              >
-                <option value="full_time">Full-time</option>
-                <option value="part_time">Part-time</option>
-                <option value="contract">Contract</option>
-                <option value="internship">Internship</option>
-                <option value="freelance">Freelance</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-                Work Mode
-              </label>
-              <select
-                v-model="workMode"
-                class="w-full rounded-lg border border-border bg-page px-3 py-2 text-xs sm:text-sm text-text-strong focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-              >
-                <option value="onsite">On-site</option>
-                <option value="hybrid">Hybrid</option>
-                <option value="remote">Remote</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-                Experience Level
-              </label>
-              <select
-                v-model="experienceLevel"
-                class="w-full rounded-lg border border-border bg-page px-3 py-2 text-xs sm:text-sm text-text-strong focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-              >
-                <option value="">Not Specified</option>
-                <option value="entry">Entry Level</option>
-                <option value="junior">Junior</option>
-                <option value="mid">Mid Level</option>
-                <option value="senior">Senior</option>
-                <option value="lead">Lead / Staff</option>
-                <option value="executive">Executive</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-                Department
-              </label>
-              <input
-                v-model="department"
-                type="text"
-                placeholder="e.g. Engineering, Product, Design"
-                class="w-full rounded-lg border border-border bg-page px-3.5 py-2.5 text-xs sm:text-sm text-text-strong placeholder:text-text-subtle focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-              />
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-                Role Category
-              </label>
-              <input
-                v-model="category"
-                type="text"
-                placeholder="e.g. Frontend Development, DevOps"
-                class="w-full rounded-lg border border-border bg-page px-3.5 py-2.5 text-xs sm:text-sm text-text-strong placeholder:text-text-subtle focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-              />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-                City / Location
-              </label>
-              <input
-                v-model="city"
-                type="text"
-                placeholder="e.g. Bengaluru, San Francisco"
-                class="w-full rounded-lg border border-border bg-page px-3.5 py-2.5 text-xs sm:text-sm text-text-strong placeholder:text-text-subtle focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-              />
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-                Country Code
-              </label>
-              <input
-                v-model="countryCode"
-                type="text"
-                placeholder="e.g. IN, US, GB"
-                class="w-full rounded-lg border border-border bg-page px-3.5 py-2.5 text-xs sm:text-sm text-text-strong placeholder:text-text-subtle focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- Form Card 2: Tech Stacks -->
-        <div class="bg-card rounded-xl sm:rounded-2xl border border-border p-5 sm:p-7 shadow-xs space-y-4">
-          <div class="flex items-center gap-2.5 border-b border-border pb-3">
-            <Sparkles class="h-5 w-5 text-primary flex-shrink-0" />
-            <h2 class="text-base sm:text-lg font-bold text-text-strong">Tech Stacks & Skills</h2>
-          </div>
-
-          <div>
-            <div class="flex gap-2">
-              <input
-                v-model="techStackInput"
-                type="text"
-                placeholder="Type a skill/technology and press Enter"
-                @keydown.enter.prevent="addTechStack()"
-                class="flex-1 rounded-lg border border-border bg-page px-3.5 py-2 text-xs sm:text-sm text-text-strong placeholder:text-text-subtle focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-              />
-              <button
-                type="button"
-                @click="addTechStack()"
-                class="px-4 py-2 text-xs font-semibold rounded-lg bg-surface-raised border border-border hover:bg-border text-text-strong transition cursor-pointer"
-              >
-                Add
-              </button>
-            </div>
-
-            <!-- Active tags -->
-            <div v-if="techStacks.length > 0" class="flex flex-wrap gap-2 mt-3">
-              <span
-                v-for="(tech, index) in techStacks"
-                :key="tech"
-                class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-lg bg-primary-light text-primary border border-primary/20"
-              >
-                {{ tech }}
-                <button
-                  type="button"
-                  @click="removeTechStack(index)"
-                  class="hover:text-rose-600 transition"
-                >
-                  &times;
-                </button>
-              </span>
-            </div>
-
-            <!-- Suggested tags -->
-            <div class="mt-4 pt-3 border-t border-border/60">
-              <span class="text-xs text-text-muted mr-2">Suggestions:</span>
-              <div class="inline-flex flex-wrap gap-1.5 mt-1">
-                <button
-                  v-for="s in commonTechStacks"
-                  :key="s"
-                  type="button"
-                  @click="addTechStack(s)"
-                  :disabled="techStacks.includes(s)"
-                  class="px-2.5 py-0.5 text-[11px] rounded-md border border-border text-text-secondary hover:bg-surface-raised disabled:opacity-30 disabled:cursor-not-allowed transition"
-                >
-                  + {{ s }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Form Card 3: Role Content (Rich Text) -->
-        <div class="bg-card rounded-xl sm:rounded-2xl border border-border p-5 sm:p-7 shadow-xs space-y-6">
-          <div class="flex items-center gap-2.5 border-b border-border pb-3">
-            <FileText class="h-5 w-5 text-primary flex-shrink-0" />
-            <h2 class="text-base sm:text-lg font-bold text-text-strong">Job Description & Details</h2>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-              Full Job Description
-            </label>
-            <RichTextEditor v-model="description" placeholder="Introduce the company, mission, and the role..." />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-              Responsibilities
-            </label>
-            <RichTextEditor v-model="responsibilities" placeholder="Key responsibilities and day-to-day duties..." />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-              Requirements & Qualifications
-            </label>
-            <RichTextEditor v-model="requirements" placeholder="Must-have qualifications, skills, and experience..." />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-              Nice to Have
-            </label>
-            <RichTextEditor v-model="niceToHave" placeholder="Bonus qualifications, preferred domains..." />
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
-              What We Offer / Benefits
-            </label>
-            <RichTextEditor v-model="whatWeOffer" placeholder="Perks, healthcare, equity, flexible work, learning budget..." />
-          </div>
-        </div>
-
-        <!-- Form Card 4: Hiring Process & Stages -->
-        <div class="bg-card rounded-xl sm:rounded-2xl border border-border p-5 sm:p-7 shadow-xs space-y-5">
-          <div class="flex items-center justify-between border-b border-border pb-3">
-            <div class="flex items-center gap-2.5">
-              <Layers class="h-5 w-5 text-primary flex-shrink-0" />
-              <h2 class="text-base sm:text-lg font-bold text-text-strong">Selection Process</h2>
-            </div>
-          </div>
-
-          <!-- Custom hiring process toggle -->
-          <div class="flex items-center gap-3 p-3.5 rounded-xl bg-surface-raised border border-border">
-            <input
-              id="customHiringProcess"
-              v-model="hasCustomHiringProcess"
-              type="checkbox"
-              class="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
-            />
-            <label for="customHiringProcess" class="text-xs sm:text-sm font-medium text-text-strong cursor-pointer">
-              External / Custom application instructions (bypass platform stages)
-            </label>
-          </div>
-
-          <!-- Custom instructions editor -->
-          <div v-if="hasCustomHiringProcess" class="space-y-2 pt-2">
-            <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">
-              Instructions for Candidates
-            </label>
-            <RichTextEditor v-model="howToApply" placeholder="Provide direct application link, email, or specific instructions..." />
-          </div>
-
-          <!-- Platform standard stages -->
-          <div v-else class="space-y-4">
-            <div class="flex items-center justify-between">
-              <p class="text-xs text-text-muted">
-                Configure evaluation stages for candidates applying via the platform (up to 3 stages).
+          <!-- 1. BASIC INFORMATION -->
+          <section class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
+            <div class="border-b border-border pb-4">
+              <h2 class="text-base sm:text-lg lg:text-xl font-semibold text-text-strong flex items-center gap-2">
+                <Briefcase class="h-5 w-5 text-primary flex-shrink-0" /> Basic Information
+              </h2>
+              <p class="text-xs sm:text-sm text-text-muted mt-1">
+                Title and role overview visible on job cards and search listings.
               </p>
-              <button
-                v-if="processes.length < 3"
-                type="button"
-                @click="addProcess"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-surface-raised border border-border text-text-strong hover:bg-border transition cursor-pointer"
-              >
-                <Plus class="h-3.5 w-3.5" /> Add Stage
-              </button>
             </div>
 
-            <div class="space-y-4">
-              <div
-                v-for="(p, index) in processes"
-                :key="index"
-                class="p-4 sm:p-5 rounded-xl border border-border bg-page space-y-4"
-              >
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <span class="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white text-xs font-bold">
-                      {{ index + 1 }}
-                    </span>
-                    <h3 class="text-xs sm:text-sm font-bold text-text-strong">
-                      Stage {{ index + 1 }} Configuration
-                    </h3>
-                  </div>
-                  <button
-                    v-if="processes.length > 1"
-                    type="button"
-                    @click="removeProcess(index)"
-                    class="p-1 rounded text-text-muted hover:text-rose-600 transition"
-                    title="Remove Stage"
-                  >
-                    <Trash2 class="h-4 w-4" />
-                  </button>
-                </div>
+            <div class="space-y-4 sm:space-y-5">
+              <!-- Job Title -->
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">
+                  Job Title <span class="text-danger">*</span>
+                </label>
+                <input
+                  v-model="title"
+                  required
+                  type="text"
+                  class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3.5 py-2.5 text-xs sm:text-sm shadow-sm placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                  placeholder="e.g. Senior Full Stack Engineer"
+                />
+              </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">
-                      Stage Title
-                    </label>
-                    <input
-                      v-model="p.title"
-                      type="text"
-                      placeholder="e.g. Technical Quiz, Screening Call"
-                      class="w-full rounded-lg border border-border bg-card px-3 py-2 text-xs sm:text-sm text-text-strong placeholder:text-text-subtle focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-                    />
-                  </div>
+              <!-- Short Description -->
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">
+                  Short Description
+                </label>
+                <input
+                  v-model="shortDescription"
+                  type="text"
+                  class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3.5 py-2.5 text-xs sm:text-sm shadow-sm placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                  placeholder="One-line summary for job cards and search previews"
+                />
+              </div>
 
-                  <div>
-                    <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">
-                      Stage Type
-                    </label>
-                    <select
-                      v-model="p.process_type"
-                      class="w-full rounded-lg border border-border bg-card px-3 py-2 text-xs sm:text-sm text-text-strong focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-                    >
-                      <option value="screening">Screening</option>
-                      <option value="quiz">Assessment Quiz</option>
-                      <option value="coding">Coding Challenge</option>
-                      <option value="custom">Custom / Other</option>
-                    </select>
-                  </div>
-                </div>
+              <!-- Rich Text: Description -->
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
+                  Full Description (About the Role)
+                </label>
+                <p class="text-[11px] sm:text-xs text-text-muted mb-2">
+                  Use rich text formatting to clearly present your company culture and role summary.
+                </p>
+                <RichTextEditor
+                  v-model="description"
+                  placeholder="Describe the opportunity, key missions, team context..."
+                  min-height="160px"
+                />
+              </div>
 
-                <!-- Quiz question bank selection -->
-                <div v-if="p.process_type === 'quiz' || p.process_type.includes('quiz')" class="p-3.5 rounded-lg bg-surface-raised border border-border space-y-2">
-                  <div class="flex items-center justify-between">
-                    <label class="block text-xs font-semibold text-text-strong">
-                      Select Question Bank for Quiz
-                    </label>
-                  </div>
-                  <select
-                    v-model="p.question_bank_id"
-                    class="w-full rounded-lg border border-border bg-card px-3 py-2 text-xs sm:text-sm text-text-strong focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-                  >
-                    <option :value="null">-- Choose a question bank --</option>
-                    <option
-                      v-for="bank in questionBanks"
-                      :key="bank.id"
-                      :value="bank.id"
-                    >
-                      {{ bank.name }} ({{ bank.question_count || bank.questions?.length || 0 }} questions)
-                    </option>
-                  </select>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">
-                      Time Limit (Minutes)
-                    </label>
-                    <input
-                      v-model.number="p.time_limit_minutes"
-                      type="number"
-                      min="1"
-                      placeholder="e.g. 45 (leave empty for untimed)"
-                      class="w-full rounded-lg border border-border bg-card px-3 py-2 text-xs sm:text-sm text-text-strong placeholder:text-text-subtle focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-                    />
-                  </div>
-
-                  <div class="flex items-center pt-6">
-                    <label class="inline-flex items-center gap-2 text-xs sm:text-sm text-text-strong cursor-pointer select-none">
-                      <input
-                        v-model="p.is_mandatory"
-                        type="checkbox"
-                        class="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
-                      />
-                      Mandatory stage (must be completed to advance)
-                    </label>
-                  </div>
+              <!-- Rich Text: Responsibilities & Requirements -->
+              <div class="grid grid-cols-1 gap-5 sm:gap-6">
+                <div>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
+                    Responsibilities
+                  </label>
+                  <p class="text-[11px] sm:text-xs text-text-muted mb-2">
+                    Bullet lists work best for day-to-day duties.
+                  </p>
+                  <RichTextEditor
+                    v-model="responsibilities"
+                    placeholder="• Architect and ship scalable features&#10;• Collaborate with cross-functional teams..."
+                    min-height="140px"
+                  />
                 </div>
 
                 <div>
-                  <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">
-                    Stage Description / Instructions
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
+                    Requirements (Must-haves)
                   </label>
-                  <textarea
-                    v-model="p.description"
-                    rows="2"
-                    placeholder="Instructions shown to candidates for this stage..."
-                    class="w-full rounded-lg border border-border bg-card px-3 py-2 text-xs sm:text-sm text-text-strong placeholder:text-text-subtle focus:border-primary focus:ring-1 focus:ring-primary shadow-xs resize-none"
-                  ></textarea>
+                  <p class="text-[11px] sm:text-xs text-text-muted mb-2">
+                    Essential skills, experience, and qualifications needed.
+                  </p>
+                  <RichTextEditor
+                    v-model="requirements"
+                    placeholder="• 4+ years of full-stack engineering experience&#10;• Strong proficiency in TypeScript..."
+                    min-height="140px"
+                  />
+                </div>
+              </div>
+
+              <!-- Rich Text: Nice to Have -->
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-xs sm:text-sm font-medium text-text-secondary flex items-center gap-1.5">
+                    <Check class="h-4 w-4 text-text-secondary" /> Nice to have (Bonus skills)
+                  </label>
+                  <span class="text-[11px] sm:text-xs text-text-subtle">Optional</span>
+                </div>
+                <p class="text-[11px] sm:text-xs text-text-muted mb-2">
+                  Additional skills or domain knowledge that give candidates an extra edge.
+                </p>
+                <RichTextEditor
+                  v-model="niceToHave"
+                  placeholder="• Experience with distributed systems&#10;• Familiarity with Supabase or GraphQL..."
+                  min-height="120px"
+                />
+              </div>
+
+              <!-- Rich Text: What We Offer -->
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-xs sm:text-sm font-medium text-text-secondary flex items-center gap-1.5">
+                    <Gift class="h-4 w-4 text-text-secondary" /> What we offer (Benefits & Perks)
+                  </label>
+                  <span class="text-[11px] sm:text-xs text-text-subtle">Optional</span>
+                </div>
+                <p class="text-[11px] sm:text-xs text-text-muted mb-2">
+                  Health coverage, remote stipend, flexible hours, paid time off, learning budgets...
+                </p>
+                <RichTextEditor
+                  v-model="whatWeOffer"
+                  placeholder="• Competitive compensation package&#10;• Comprehensive health & dental insurance&#10;• Flexible vacation policy..."
+                  min-height="120px"
+                />
+              </div>
+            </div>
+          </section>
+
+          <!-- 2. TECH STACKS -->
+          <section class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-5">
+            <div class="border-b border-border pb-4">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
+                <h2 class="text-base sm:text-lg lg:text-xl font-semibold text-text-strong flex items-center gap-2">
+                  <Code2 class="h-5 w-5 text-primary flex-shrink-0" /> Tech Stacks
+                </h2>
+                <span class="text-[11px] sm:text-xs text-text-subtle">Optional (for technical roles)</span>
+              </div>
+              <p class="text-xs sm:text-sm text-text-muted mt-1">
+                Highlight the key technologies, languages, and tools relevant to this position.
+              </p>
+            </div>
+
+            <div class="space-y-4">
+              <!-- Add Tech Input Form -->
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input
+                  v-model="newTechInput"
+                  type="text"
+                  placeholder="e.g. React, PostgreSQL, Docker"
+                  class="block flex-1 rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3.5 py-2.5 text-xs sm:text-sm shadow-sm placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                  @keydown.enter.prevent="addTechStack()"
+                />
+                <button
+                  type="button"
+                  @click="addTechStack()"
+                  class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl text-white bg-primary hover:bg-primary-hover active:scale-[0.98] transition shadow-sm"
+                >
+                  <Plus class="h-4 w-4" /> Add Stack
+                </button>
+              </div>
+
+              <!-- Quick Add Chips -->
+              <div>
+                <span class="text-[11px] sm:text-xs font-medium text-text-secondary block mb-2">Popular presets:</span>
+                <div class="flex flex-wrap gap-1.5">
+                  <button
+                    v-for="preset in popularTechStacks"
+                    :key="preset"
+                    type="button"
+                    @click="addTechStack(preset)"
+                    class="px-2.5 py-1 bg-surface-raised border border-border text-text-secondary hover:bg-primary-light hover:text-primary hover:border-primary/30 rounded-md sm:rounded-lg text-[11px] sm:text-xs font-medium transition"
+                  >
+                    + {{ preset }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Active Selected Tech Badges -->
+              <div v-if="techStacks.length > 0" class="pt-3 border-t border-border">
+                <span class="text-xs font-semibold text-text-secondary block mb-2.5">Selected Technologies:</span>
+                <div class="flex flex-wrap gap-2">
+                  <span
+                    v-for="(tech, idx) in techStacks"
+                    :key="tech"
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-primary-light text-primary border border-primary/30 shadow-xs"
+                  >
+                    <Code2 class="h-3.5 w-3.5" />
+                    {{ tech }}
+                    <button
+                      type="button"
+                      @click="removeTechStack(idx)"
+                      class="hover:text-danger focus:outline-none transition-colors p-0.5 rounded-full"
+                      title="Remove item"
+                    >
+                      <X class="h-3.5 w-3.5" />
+                    </button>
+                  </span>
                 </div>
               </div>
             </div>
+          </section>
 
-            <!-- Public visibility of stages -->
-            <div class="flex items-center gap-2 pt-2">
-              <input
-                id="isSelectionPublic"
-                v-model="isSelectionProcessPublic"
-                type="checkbox"
-                class="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
-              />
-              <label for="isSelectionPublic" class="text-xs sm:text-sm text-text-secondary cursor-pointer select-none">
-                Make selection process stages publicly visible on the job detail page
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- Form Card 5: Compensation & Details -->
-        <div class="bg-card rounded-xl sm:rounded-2xl border border-border p-5 sm:p-7 shadow-xs space-y-4">
-          <div class="flex items-center gap-2.5 border-b border-border pb-3">
-            <DollarSign class="h-5 w-5 text-primary flex-shrink-0" />
-            <h2 class="text-base sm:text-lg font-bold text-text-strong">Compensation & Settings</h2>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-                Minimum Salary
-              </label>
-              <input
-                v-model.number="salaryMin"
-                type="number"
-                min="0"
-                step="1000"
-                placeholder="e.g. 500000"
-                class="w-full rounded-lg border border-border bg-page px-3 py-2 text-xs sm:text-sm text-text-strong focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-              />
+          <!-- 3. CLASSIFICATION & LOCATION -->
+          <section class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-5">
+            <div class="border-b border-border pb-4">
+              <h2 class="text-base sm:text-lg lg:text-xl font-semibold text-text-strong flex items-center gap-2">
+                <Layers class="h-5 w-5 text-primary flex-shrink-0" /> Classification & Location
+              </h2>
+              <p class="text-xs sm:text-sm text-text-muted mt-1">
+                Categorize the role so applicants can search and filter efficiently.
+              </p>
             </div>
 
-            <div>
-              <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-                Maximum Salary
-              </label>
-              <input
-                v-model.number="salaryMax"
-                type="number"
-                min="0"
-                step="1000"
-                placeholder="e.g. 900000"
-                class="w-full rounded-lg border border-border bg-page px-3 py-2 text-xs sm:text-sm text-text-strong focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-              />
+            <div class="space-y-5">
+              <!-- Row 1: Type, Mode, Level -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                <div>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Job Type</label>
+                  <select
+                    v-model="jobType"
+                    class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3 py-2.5 text-xs sm:text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                  >
+                    <option value="full_time">Full-time</option>
+                    <option value="part_time">Part-time</option>
+                    <option value="contract">Contract</option>
+                    <option value="internship">Internship</option>
+                    <option value="freelance">Freelance</option>
+                    <option value="temporary">Temporary</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Work Mode</label>
+                  <select
+                    v-model="workMode"
+                    class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3 py-2.5 text-xs sm:text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                  >
+                    <option value="onsite">On-site</option>
+                    <option value="remote">Remote</option>
+                    <option value="hybrid">Hybrid</option>
+                  </select>
+                </div>
+
+                <div class="sm:col-span-2 lg:col-span-1">
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Experience Level</label>
+                  <select
+                    v-model="experienceLevel"
+                    class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3 py-2.5 text-xs sm:text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                  >
+                    <option value="">Select Level</option>
+                    <option value="entry">Entry</option>
+                    <option value="junior">Junior</option>
+                    <option value="mid">Mid-level</option>
+                    <option value="senior">Senior</option>
+                    <option value="lead">Lead</option>
+                    <option value="executive">Executive</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Row 2: Department & Category -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                <div>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Department</label>
+                  <input
+                    v-model="department"
+                    type="text"
+                    placeholder="e.g. Engineering, Product"
+                    class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3.5 py-2.5 text-xs sm:text-sm shadow-sm placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Category</label>
+                  <input
+                    v-model="category"
+                    type="text"
+                    placeholder="Software, Design, Marketing..."
+                    class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3.5 py-2.5 text-xs sm:text-sm shadow-sm placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                  />
+                </div>
+              </div>
+
+              <!-- Row 3: City & Country Code -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                <div>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">City</label>
+                  <input
+                    v-model="city"
+                    type="text"
+                    placeholder="e.g. San Francisco or Colombo"
+                    class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3.5 py-2.5 text-xs sm:text-sm shadow-sm placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Country Code</label>
+                  <input
+                    v-model="countryCode"
+                    type="text"
+                    maxlength="2"
+                    placeholder="US, LK, GB"
+                    class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3.5 py-2.5 text-xs sm:text-sm uppercase shadow-sm placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 4. COMPENSATION -->
+          <section class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-5">
+            <div class="border-b border-border pb-4">
+              <h2 class="text-base sm:text-lg lg:text-xl font-semibold text-text-strong flex items-center gap-2">
+                <DollarSign class="h-5 w-5 text-primary flex-shrink-0" /> Compensation & Pay Range
+              </h2>
+              <p class="text-xs sm:text-sm text-text-muted mt-1">
+                Provide salary details to improve applicant engagement and transparency.
+              </p>
             </div>
 
-            <div>
-              <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-                Currency
-              </label>
-              <select
-                v-model="salaryCurrency"
-                class="w-full rounded-lg border border-border bg-page px-3 py-2 text-xs sm:text-sm text-text-strong focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-              >
-                <option value="INR">INR (₹)</option>
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-2 pt-1">
-            <input
-              id="showSalary"
-              v-model="showSalary"
-              type="checkbox"
-              class="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
-            />
-            <label for="showSalary" class="text-xs sm:text-sm text-text-secondary cursor-pointer select-none">
-              Display salary range publicly on the job posting
-            </label>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-border">
-            <div>
-              <label class="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
-                Application Deadline
-              </label>
-              <input
-                v-model="applicationDeadline"
-                type="date"
-                class="w-full rounded-lg border border-border bg-page px-3 py-2 text-xs sm:text-sm text-text-strong focus:border-primary focus:ring-1 focus:ring-primary shadow-xs"
-              />
-            </div>
-
-            <div class="flex items-center pt-6">
-              <label class="inline-flex items-center gap-2 text-xs sm:text-sm text-text-strong cursor-pointer select-none">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Min Salary</label>
                 <input
+                  v-model.number="salaryMin"
+                  type="number"
+                  placeholder="e.g. 80000"
+                  class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3.5 py-2.5 text-xs sm:text-sm shadow-sm placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Max Salary</label>
+                <input
+                  v-model.number="salaryMax"
+                  type="number"
+                  placeholder="e.g. 120000"
+                  class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3.5 py-2.5 text-xs sm:text-sm shadow-sm placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Currency</label>
+                <input
+                  v-model="salaryCurrency"
+                  type="text"
+                  maxlength="3"
+                  placeholder="USD / LKR"
+                  class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3.5 py-2.5 text-xs sm:text-sm uppercase shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                />
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 pt-2">
+              <input
+                id="showSalaryEdit"
+                v-model="showSalary"
+                type="checkbox"
+                class="h-4.5 w-4.5 sm:h-5 sm:w-5 rounded border-border text-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+              />
+              <label for="showSalaryEdit" class="text-xs sm:text-sm font-medium text-text-secondary cursor-pointer select-none">
+                Display salary range publicly on the job posting
+              </label>
+            </div>
+
+            <!-- Application Deadline & Accept Applications -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 pt-3 border-t border-border">
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">
+                  Application Deadline (Closing Date)
+                </label>
+                <input
+                  v-model="applicationDeadline"
+                  type="date"
+                  class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3.5 py-2.5 text-xs sm:text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                />
+                <p class="text-[11px] sm:text-xs text-text-muted mt-1">
+                  Leave empty for a rolling deadline. After this date, the job will automatically be closed.
+                </p>
+              </div>
+
+              <div class="flex items-center gap-3 pt-5 sm:pt-6">
+                <input
+                  id="acceptApplicationsEdit"
                   v-model="acceptApplications"
                   type="checkbox"
-                  class="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+                  class="h-4.5 w-4.5 sm:h-5 sm:w-5 rounded border-border text-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
                 />
-                Accepting applications for this position
-              </label>
+                <label for="acceptApplicationsEdit" class="text-xs sm:text-sm font-medium text-text-secondary cursor-pointer select-none">
+                  Currently accepting applications
+                </label>
+              </div>
             </div>
-          </div>
-        </div>
+          </section>
 
-        <!-- Sticky / Action Bar -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-card border border-border shadow-md">
-          <button
-            type="button"
-            @click="router.push(`/jobs/${jobId}`)"
-            class="px-5 py-2.5 text-xs sm:text-sm font-semibold rounded-xl bg-surface-raised border border-border text-text-strong hover:bg-border transition cursor-pointer"
-          >
-            Cancel
-          </button>
+          <!-- 5. HIRING PROCESS & SELECTION PATHWAY -->
+          <section class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-6">
+            <div class="border-b border-border pb-4">
+              <h2 class="text-base sm:text-lg lg:text-xl font-semibold text-text-strong">
+                Hiring Process & Application Pathway
+              </h2>
+              <p class="text-xs sm:text-sm text-text-muted mt-1">
+                Choose how candidates apply: through custom company instructions or our structured stage assessments.
+              </p>
+            </div>
 
-          <div class="flex items-center gap-3">
+            <!-- Pathway Choice Card -->
+            <div class="p-4 sm:p-5 rounded-xl border border-border bg-surface-raised space-y-3">
+              <div class="flex items-start gap-3">
+                <input
+                  id="customHiringCheckEdit"
+                  v-model="hasCustomHiringProcess"
+                  type="checkbox"
+                  class="mt-1 h-4.5 w-4.5 sm:h-5 sm:w-5 rounded border-border text-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                />
+                <label for="customHiringCheckEdit" class="cursor-pointer select-none">
+                  <span class="block text-xs sm:text-sm font-semibold text-text-strong">
+                    Perform hiring process on our own (Custom instructions)
+                  </span>
+                  <span class="block text-[11px] sm:text-xs text-text-muted mt-1 leading-relaxed">
+                    Check this if you want candidates to apply externally (e.g., through your careers portal or email) rather than using platform assessment stages.
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <!-- OPTION A: Custom Hiring Instructions -->
+            <div v-if="hasCustomHiringProcess" class="space-y-3 pl-3 sm:pl-4 border-l-2 border-primary ml-1">
+              <label class="block text-xs sm:text-sm font-semibold text-text-strong">
+                How to Apply (Instructions for Candidates) <span class="text-danger">*</span>
+              </label>
+              <p class="text-[11px] sm:text-xs text-text-muted mb-2">
+                Explain clearly what candidates should do (e.g. submit resumes to careers@company.com, link to external application portal, required attachments, etc.).
+              </p>
+              <RichTextEditor
+                v-model="howToApply"
+                placeholder="To apply for this role, please email your CV and portfolio to careers@yourcompany.com with the subject line 'Application: [Job Title]'..."
+                min-height="140px"
+              />
+            </div>
+
+            <!-- OPTION B: Platform Selection Stages -->
+            <div v-else class="space-y-6">
+              <!-- Stage Visibility Checkbox -->
+              <div class="p-4 rounded-xl border border-primary/30 bg-primary-light flex items-start gap-3">
+                <input
+                  id="visibilityCheckEdit"
+                  v-model="isSelectionProcessPublic"
+                  type="checkbox"
+                  class="mt-0.5 h-4.5 w-4.5 sm:h-5 sm:w-5 rounded border-border text-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                />
+                <label for="visibilityCheckEdit" class="cursor-pointer select-none">
+                  <span class="text-xs sm:text-sm font-semibold text-text-strong flex items-center gap-1.5">
+                    <component :is="isSelectionProcessPublic ? Eye : EyeOff" class="h-4 w-4 text-primary flex-shrink-0" />
+                    Make selection process stages visible to candidates
+                  </span>
+                  <span class="block text-[11px] sm:text-xs text-text-secondary mt-1 leading-relaxed">
+                    When unchecked, selection stages remain internal and are only visible to organization administrators and staff members.
+                  </span>
+                </label>
+              </div>
+
+              <!-- Stages Builder (Max 3) -->
+              <div class="space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 class="text-xs sm:text-sm font-semibold text-text-strong">
+                      Platform Assessment Stages (Max 3)
+                    </h3>
+                    <p class="text-[11px] sm:text-xs text-text-muted">Configure progressive evaluation steps for applicants.</p>
+                  </div>
+                  <button
+                    type="button"
+                    :disabled="!canAddProcess"
+                    @click="addProcess"
+                    class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg text-white bg-primary hover:bg-primary-hover disabled:opacity-50 transition shadow-xs self-start sm:self-auto"
+                  >
+                    <Plus class="h-4 w-4" /> Add Stage
+                  </button>
+                </div>
+
+                <div
+                  v-if="processes.length === 0"
+                  class="text-xs text-text-muted py-8 text-center border-2 border-dashed border-border rounded-xl px-4"
+                >
+                  No stages added. Candidates will submit a direct application without preliminary tests.
+                </div>
+
+                <div
+                  v-for="(process, index) in processes"
+                  :key="index"
+                  class="border border-border rounded-xl p-4 sm:p-5 space-y-4 bg-surface-raised relative shadow-xs"
+                >
+                  <div class="flex items-center justify-between border-b border-border pb-2.5">
+                    <span class="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                      Stage {{ index + 1 }}
+                    </span>
+                    <button
+                      type="button"
+                      @click="removeProcess(index)"
+                      class="text-text-subtle hover:text-danger p-1 rounded-lg transition-colors"
+                      title="Remove stage"
+                    >
+                      <X class="h-4.5 w-4.5" />
+                    </button>
+                  </div>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-medium text-text-secondary mb-1">Stage Title</label>
+                      <input
+                        v-model="process.title"
+                        type="text"
+                        placeholder="e.g. Technical Quiz or Code Review"
+                        class="block w-full rounded-lg border border-border bg-card text-text-strong px-3 py-2 text-xs sm:text-sm shadow-sm placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-text-secondary mb-1">Assessment Type</label>
+                      <select
+                        v-model="process.process_type"
+                        class="block w-full rounded-lg border border-border bg-card text-text-strong px-3 py-2 text-xs sm:text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                      >
+                        <option value="quiz">Quiz Assessment</option>
+                        <option value="screening">Screening Questionnaire</option>
+                        <option value="coding">Coding Challenge</option>
+                        <option value="screening_quiz">Screening + Quiz</option>
+                        <option value="screening_coding">Screening + Coding</option>
+                        <option value="quiz_coding">Quiz + Coding</option>
+                        <option value="custom">Custom Evaluation</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-medium text-text-secondary mb-1">Description / Brief</label>
+                    <textarea
+                      v-model="process.description"
+                      rows="2"
+                      placeholder="Brief guidance for the applicant..."
+                      class="block w-full rounded-lg border border-border bg-card text-text-strong px-3 py-2 text-xs sm:text-sm shadow-sm placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                    ></textarea>
+                  </div>
+
+                  <!-- QUESTION BANK SELECTOR (shown when stage type is or includes Quiz) -->
+                  <div
+                    v-if="process.process_type.includes('quiz')"
+                    class="p-3.5 rounded-xl border border-primary/20 bg-primary-light/40 space-y-2"
+                  >
+                    <div class="flex items-center justify-between">
+                      <label class="text-xs font-semibold text-text-strong flex items-center gap-1.5">
+                        <Layers class="h-3.5 w-3.5 text-primary" />
+                        Question Bank Assessment *
+                      </label>
+                    </div>
+
+                    <select
+                      v-model="process.question_bank_id"
+                      class="block w-full rounded-lg border border-border bg-card text-text-strong px-3 py-2 text-xs sm:text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                    >
+                      <option :value="null">-- Select a Question Bank --</option>
+                      <option v-for="b in questionBanks" :key="b.id" :value="b.id">
+                        {{ b.name }} ({{ b.questions_count }} questions, {{ b.total_points }} pts) {{ b.category ? `• ${b.category}` : '' }}
+                      </option>
+                    </select>
+
+                    <p class="text-[11px] text-text-muted">
+                      Questions from this bank will be served to applicants who reach this stage.
+                    </p>
+                  </div>
+
+                  <div class="flex flex-col sm:flex-row sm:items-center gap-4 pt-1">
+                    <div class="flex items-center gap-2">
+                      <input
+                        :id="`mandatory-edit-${index}`"
+                        v-model="process.is_mandatory"
+                        type="checkbox"
+                        class="h-4 w-4 rounded border-border text-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                      />
+                      <label :for="`mandatory-edit-${index}`" class="text-xs font-medium text-text-secondary cursor-pointer select-none">
+                        Mandatory to advance
+                      </label>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <label class="text-xs font-medium text-text-secondary whitespace-nowrap">Time limit (minutes):</label>
+                      <input
+                        v-model.number="process.time_limit_minutes"
+                        type="number"
+                        min="1"
+                        placeholder="Unlimited"
+                        class="w-28 rounded-lg border border-border bg-card text-text-strong px-2.5 py-1.5 text-xs placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- SUBMIT ACTIONS -->
+          <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
+            <button
+              type="button"
+              :disabled="saving"
+              @click="router.push(`/jobs/${jobId}`)"
+              class="inline-flex items-center justify-center gap-2 px-6 py-3 text-xs sm:text-sm font-medium rounded-xl border border-border bg-card text-text-secondary hover:bg-surface-raised disabled:opacity-50 transition shadow-sm"
+            >
+              Cancel
+            </button>
             <button
               v-if="jobStatus === 'draft'"
               type="button"
-              @click="saveJob(true)"
               :disabled="saving"
-              class="inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs sm:text-sm font-semibold rounded-xl text-white bg-primary hover:bg-primary-hover disabled:opacity-50 transition shadow-xs cursor-pointer"
+              @click="handleSubmit(true)"
+              class="inline-flex items-center justify-center gap-2 px-6 py-3 text-xs sm:text-sm font-semibold rounded-xl text-white bg-primary hover:bg-primary-hover disabled:opacity-50 active:scale-[0.99] transition shadow-sm"
             >
               <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
               <Send v-else class="h-4 w-4" />
-              Save & Publish
+              {{ saving ? 'Saving...' : 'Save & Publish' }}
             </button>
-
             <button
               type="button"
-              @click="saveJob(false)"
               :disabled="saving"
-              class="inline-flex items-center justify-center gap-2 px-6 py-2.5 text-xs sm:text-sm font-semibold rounded-xl text-text-strong bg-surface-raised hover:bg-border border border-border disabled:opacity-50 transition shadow-xs cursor-pointer"
+              @click="handleSubmit(false)"
+              class="inline-flex items-center justify-center gap-2 px-6 py-3 text-xs sm:text-sm font-semibold rounded-xl border border-border bg-surface-raised text-text-strong hover:bg-border disabled:opacity-50 active:scale-[0.99] transition shadow-sm"
             >
               <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
               <Save v-else class="h-4 w-4" />
-              Save Changes
+              {{ saving ? 'Saving...' : 'Save Changes' }}
             </button>
           </div>
-        </div>
-      </div>
+        </form>
+      </template>
+
     </div>
   </div>
 </template>

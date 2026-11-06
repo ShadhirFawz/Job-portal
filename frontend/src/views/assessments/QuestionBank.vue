@@ -451,6 +451,7 @@ async function onDrop(target: Question) {
 
   const reordered = [...questions]
   const [moved] = reordered.splice(fromIdx, 1)
+  if (!moved) return
   reordered.splice(toIdx, 0, moved)
   selectedBank.value.questions = reordered
 

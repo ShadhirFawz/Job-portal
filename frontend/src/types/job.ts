@@ -28,7 +28,7 @@ export interface SelectionProcess {
 }
 
 export interface UpdateJobPayload {
-  title: string
+  title?: string
   short_description?: string | null
   description?: string | null
   responsibilities?: string | null
@@ -37,11 +37,11 @@ export interface UpdateJobPayload {
   nice_to_have?: string | null
   what_we_offer?: string | null
   tech_stacks?: string[]
-  has_custom_hiring_process: boolean
+  has_custom_hiring_process?: boolean
   how_to_apply?: string | null
-  is_selection_process_public: boolean
-  job_type: JobType | string
-  work_mode: WorkMode | string
+  is_selection_process_public?: boolean
+  job_type?: JobType | string
+  work_mode?: WorkMode | string
   experience_level?: ExperienceLevel | string | null
   department?: string | null
   category?: string | null
@@ -50,7 +50,7 @@ export interface UpdateJobPayload {
   salary_min?: number | null
   salary_max?: number | null
   salary_currency?: string
-  show_salary: boolean
+  show_salary?: boolean
   application_deadline?: string | null
   accept_applications?: boolean
   status?: string
@@ -130,5 +130,4 @@ export interface PagedJobsResponse {
   pageSize: number
   totalPages: number
 }
-
 

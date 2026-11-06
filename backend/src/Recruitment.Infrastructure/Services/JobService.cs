@@ -20,7 +20,8 @@ public class JobService : IJobService
         var page = Math.Max(1, filters.Page);
         var pageSize = filters.PageSize > 0 && filters.PageSize <= 50 ? filters.PageSize : 12;
 
-        var query = "jobs?status=eq.published&deleted_at=is.null";
+        // Only published jobs whose deadline hasn't passed (or have no deadline set)
+        var query = "jobs?status=eq.published&deleted_at=is.null&or=(application_deadline.is.null,application_deadline.gt.now())";
 
         var search = !string.IsNullOrWhiteSpace(filters.Search) ? filters.Search : filters.Q;
         var jobType = !string.IsNullOrWhiteSpace(filters.JobType) ? filters.JobType : filters.Type;

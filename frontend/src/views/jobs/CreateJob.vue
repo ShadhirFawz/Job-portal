@@ -729,6 +729,35 @@ async function handleSubmit(publish = false) {
               Display salary range publicly on the job posting
             </label>
           </div>
+
+          <!-- Application Deadline & Accept Applications -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 pt-3 border-t border-border">
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">
+                Application Deadline (Closing Date)
+              </label>
+              <input
+                v-model="applicationDeadline"
+                type="date"
+                class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3.5 py-2.5 text-xs sm:text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+              />
+              <p class="text-[11px] sm:text-xs text-text-muted mt-1">
+                Leave empty for a rolling deadline. After this date, the job will automatically be closed.
+              </p>
+            </div>
+
+            <div class="flex items-center gap-3 pt-5 sm:pt-6">
+              <input
+                id="acceptApplications"
+                v-model="acceptApplications"
+                type="checkbox"
+                class="h-4.5 w-4.5 sm:h-5 sm:w-5 rounded border-border text-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+              />
+              <label for="acceptApplications" class="text-xs sm:text-sm font-medium text-text-secondary cursor-pointer select-none">
+                Currently accepting applications
+              </label>
+            </div>
+          </div>
         </section>
 
         <!-- 5. HIRING PROCESS & SELECTION PATHWAY -->

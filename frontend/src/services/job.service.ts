@@ -1,5 +1,5 @@
 import { api } from '@/lib/api'
-import type { Job, JobFilterParams, PagedJobsResponse } from '@/types/job'
+import type { Job, JobFilterParams, PagedJobsResponse, UpdateJobPayload } from '@/types/job'
 
 export const jobService = {
   /**
