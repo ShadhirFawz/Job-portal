@@ -170,13 +170,9 @@ async function saveBank() {
       await fetchBanks()
       selectedBank.value = created
 
-      // If return to job flag was set, redirect back to create job page with newly created bank ID
+      // If return to job flag was set, advise user to add questions before returning
       if (returnToJob.value) {
-        router.push({
-          path: `/organizations/${organizationId}/jobs/create`,
-          query: { newBankId: created.id }
-        })
-        return
+        toast.info('Bank created! Please add questions below, then click "Attach & Return to Job".')
       }
     }
   } catch (err: any) {
@@ -521,6 +517,31 @@ async function persistQuestionOrder(questions: Question[]) {
             <span>Create Question Bank</span>
           </button>
         </div>
+      </div>
+
+      <!-- Return to Job Banner -->
+      <div
+        v-if="returnToJob && selectedBank"
+        class="bg-primary-light border border-primary/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
+      >
+        <div class="space-y-1">
+          <h2 class="text-sm sm:text-base font-bold text-text-strong flex items-center gap-2">
+            <CheckCircle class="h-4 w-4 text-primary" />
+            Configuring Bank for Job: "{{ selectedBank.name }}"
+          </h2>
+          <p class="text-xs text-text-secondary leading-relaxed">
+            Add questions below. When you are ready, click "Attach & Return to Job" to select this bank on your job posting.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          @click="router.push({ path: `/organizations/${organizationId}/jobs/create`, query: { newBankId: selectedBank.id } })"
+          class="inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover shadow-xs transition shrink-0"
+        >
+          <Check class="h-4 w-4" />
+          <span>Attach & Return to Job</span>
+        </button>
       </div>
 
       <!-- Main Dual Panel Layout -->

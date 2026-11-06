@@ -78,7 +78,7 @@ const router = createRouter({
       path: '/jobs/:jobId/assessments/:processId',
       name: 'take-quiz',
       component: () => import('@/views/assessments/TakeQuiz.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true, hideNavbar: true }
     },
     {
       path: '/jobs/:id/applications',

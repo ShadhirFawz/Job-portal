@@ -24,6 +24,7 @@ import {
   DollarSign,
   Send,
   Save,
+  AlertCircle,
 } from 'lucide-vue-next'
 import { useConfirm } from '@/composables/useConfirm'
 
@@ -111,6 +112,12 @@ const processes = ref<
 >([])
 
 const canAddProcess = computed(() => processes.value.length < 3)
+
+function getBankQuestionsCount(bankId: string | null | undefined): number {
+  if (!bankId) return -1
+  const bank = questionBanks.value.find(b => b.id === bankId)
+  return bank ? (bank.questions_count ?? bank.questions?.length ?? 0) : -1
+}
 
 function addProcess() {
   if (processes.value.length >= 3) return
@@ -939,7 +946,15 @@ async function handleSubmit(publish = false) {
                     </option>
                   </select>
 
-                  <p class="text-[11px] text-text-muted">
+                  <p
+                    v-if="process.question_bank_id && getBankQuestionsCount(process.question_bank_id) === 0"
+                    class="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-1 font-medium bg-amber-500/10 p-2 rounded-lg border border-amber-500/20"
+                  >
+                    <AlertCircle class="h-4 w-4 shrink-0 text-amber-500" />
+                    This question bank has 0 questions. Please add questions to it so candidates can take this quiz.
+                  </p>
+
+                  <p v-else class="text-[11px] text-text-muted">
                     Questions from this bank will be served to applicants who reach this stage.
                   </p>
                 </div>
