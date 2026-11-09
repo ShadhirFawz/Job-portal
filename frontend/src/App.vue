@@ -2,6 +2,7 @@
 import { computed, onMounted } from 'vue'
 import { useRoute, RouterView } from 'vue-router'
 import AppNavbar from '@/components/layout/AppNavbar.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useTheme } from '@/composables/useTheme'
 
 const route = useRoute()
@@ -25,6 +26,7 @@ const hideNavbar = computed(() => {
       <RouterView />
     </main>
     <Toaster position="top-right" richColors />
+    <ConfirmDialog />
   </div>
 </template>
 

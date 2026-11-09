@@ -201,7 +201,7 @@ async function handleSubmit() {
               <input type="file" accept="image/*" class="hidden" @change="onAvatarChange" />
             </label>
           </div>
-          <div class="pb-2">
+          <div class="pb-0">
             <h1 class="text-2xl font-bold text-text-strong">Complete your profile</h1>
             <p class="text-sm text-text-muted">This information will be visible to companies</p>
           </div>

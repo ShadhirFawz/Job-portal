@@ -39,5 +39,49 @@ public class JobsController : ControllerBase
         var list = await _jobService.GetOrganizationJobsAsync(organizationId);
         return Ok(list);
     }
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> UpdateJob(Guid id, [FromQuery] Guid userId, [FromBody] UpdateJobRequest request)
+    {
+        try
+        {
+            var updated = await _jobService.UpdateJobAsync(id, userId, request);
+            return Ok(updated);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("{id:guid}/publish")]
+    public async Task<IActionResult> PublishJob(Guid id, [FromQuery] Guid userId)
+    {
+        try
+        {
+            var published = await _jobService.PublishJobAsync(id, userId);
+            return Ok(published);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }
 

@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
+import { questionBankService } from '@/services/questionBank.service'
+import type { QuestionBank } from '@/types/assessment'
 import RichTextEditor from '@/components/ui/RichTextEditor.vue'
+import { toast } from 'vue-sonner'
 import {
   Briefcase,
   Layers,
@@ -21,16 +24,23 @@ import {
   DollarSign,
   Send,
   Save,
+  AlertCircle,
 } from 'lucide-vue-next'
+import { useConfirm } from '@/composables/useConfirm'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const { confirm: showConfirm } = useConfirm()
 
 const organizationId = route.params.orgId as string
 
 const loading = ref(false)
 const errorMsg = ref('')
+
+// Question banks for selection processes
+const questionBanks = ref<QuestionBank[]>([])
+const loadingBanks = ref(false)
 
 // Job basic fields
 const title = ref('')
@@ -97,10 +107,17 @@ const processes = ref<
     description: string
     is_mandatory: boolean
     time_limit_minutes: number | null
+    question_bank_id?: string | null
   }>
 >([])
 
 const canAddProcess = computed(() => processes.value.length < 3)
+
+function getBankQuestionsCount(bankId: string | null | undefined): number {
+  if (!bankId) return -1
+  const bank = questionBanks.value.find(b => b.id === bankId)
+  return bank ? (bank.questions_count ?? bank.questions?.length ?? 0) : -1
+}
 
 function addProcess() {
   if (processes.value.length >= 3) return
@@ -110,12 +127,134 @@ function addProcess() {
     description: '',
     is_mandatory: true,
     time_limit_minutes: null,
+    question_bank_id: null,
   })
 }
 
-function removeProcess(index: number) {
+async function removeProcess(index: number) {
+  const proc = processes.value[index]
+  if (proc && (proc.title || proc.question_bank_id)) {
+    const confirmed = await showConfirm({
+      title: 'Remove Stage?',
+      message: `Are you sure you want to remove "${proc.title || proc.process_type}"? Any configurations for this stage will be discarded.`,
+      confirmLabel: 'Remove Stage',
+      variant: 'danger',
+    })
+    if (!confirmed) return
+  }
   processes.value.splice(index, 1)
 }
+
+const DRAFT_STORAGE_KEY = `create_job_draft_${organizationId}`
+
+function saveDraftToSession(pendingProcessIndex?: number) {
+  const draft = {
+    title: title.value,
+    jobType: jobType.value,
+    workMode: workMode.value,
+    experienceLevel: experienceLevel.value,
+    department: department.value,
+    category: category.value,
+    countryCode: countryCode.value,
+    city: city.value,
+    shortDescription: shortDescription.value,
+    description: description.value,
+    responsibilities: responsibilities.value,
+    requirements: requirements.value,
+    niceToHave: niceToHave.value,
+    whatWeOffer: whatWeOffer.value,
+    benefits: benefits.value,
+    techStacks: techStacks.value,
+    salaryMin: salaryMin.value,
+    salaryMax: salaryMax.value,
+    salaryCurrency: salaryCurrency.value,
+    showSalary: showSalary.value,
+    applicationDeadline: applicationDeadline.value,
+    acceptApplications: acceptApplications.value,
+    hasCustomHiringProcess: hasCustomHiringProcess.value,
+    howToApply: howToApply.value,
+    isSelectionProcessPublic: isSelectionProcessPublic.value,
+    processes: processes.value,
+    pendingProcessIndex: pendingProcessIndex ?? null
+  }
+  sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft))
+}
+
+function restoreDraftFromSession(): number | null {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY)
+    if (!raw) return null
+    const draft = JSON.parse(raw)
+    if (draft.title !== undefined) title.value = draft.title
+    if (draft.jobType !== undefined) jobType.value = draft.jobType
+    if (draft.workMode !== undefined) workMode.value = draft.workMode
+    if (draft.experienceLevel !== undefined) experienceLevel.value = draft.experienceLevel
+    if (draft.department !== undefined) department.value = draft.department
+    if (draft.category !== undefined) category.value = draft.category
+    if (draft.countryCode !== undefined) countryCode.value = draft.countryCode
+    if (draft.city !== undefined) city.value = draft.city
+    if (draft.shortDescription !== undefined) shortDescription.value = draft.shortDescription
+    if (draft.description !== undefined) description.value = draft.description
+    if (draft.responsibilities !== undefined) responsibilities.value = draft.responsibilities
+    if (draft.requirements !== undefined) requirements.value = draft.requirements
+    if (draft.niceToHave !== undefined) niceToHave.value = draft.niceToHave
+    if (draft.whatWeOffer !== undefined) whatWeOffer.value = draft.whatWeOffer
+    if (draft.benefits !== undefined) benefits.value = draft.benefits
+    if (draft.techStacks !== undefined) techStacks.value = draft.techStacks
+    if (draft.salaryMin !== undefined) salaryMin.value = draft.salaryMin
+    if (draft.salaryMax !== undefined) salaryMax.value = draft.salaryMax
+    if (draft.salaryCurrency !== undefined) salaryCurrency.value = draft.salaryCurrency
+    if (draft.showSalary !== undefined) showSalary.value = draft.showSalary
+    if (draft.applicationDeadline !== undefined) applicationDeadline.value = draft.applicationDeadline
+    if (draft.acceptApplications !== undefined) acceptApplications.value = draft.acceptApplications
+    if (draft.hasCustomHiringProcess !== undefined) hasCustomHiringProcess.value = draft.hasCustomHiringProcess
+    if (draft.howToApply !== undefined) howToApply.value = draft.howToApply
+    if (draft.isSelectionProcessPublic !== undefined) isSelectionProcessPublic.value = draft.isSelectionProcessPublic
+    if (draft.processes !== undefined && Array.isArray(draft.processes)) {
+      processes.value = draft.processes
+    }
+    return draft.pendingProcessIndex ?? null
+  } catch {
+    return null
+  }
+}
+
+function handleCreateQuestionBank(index: number) {
+  saveDraftToSession(index)
+  router.push(`/organizations/${organizationId}/questions?create=true&returnToJob=true`)
+}
+
+onMounted(async () => {
+  const pendingIndex = restoreDraftFromSession()
+
+  loadingBanks.value = true
+  try {
+    questionBanks.value = await questionBankService.getOrganizationBanks(organizationId)
+
+    const newBankId = route.query.newBankId as string | undefined
+    if (newBankId) {
+      // Auto-select newly created bank
+      if (pendingIndex !== null && pendingIndex !== undefined && processes.value[pendingIndex]) {
+        processes.value[pendingIndex]!.question_bank_id = newBankId
+      } else {
+        const quizProcess = processes.value.find(p => p.process_type.includes('quiz'))
+        if (quizProcess) {
+          quizProcess.question_bank_id = newBankId
+        } else if (processes.value.length > 0 && processes.value[0]) {
+          processes.value[0].question_bank_id = newBankId
+        }
+      }
+
+      toast.success('Question bank selected for your assessment stage!')
+      // Clear query from url
+      router.replace({ path: route.path })
+    }
+  } catch (err) {
+    console.error('Failed to load banks:', err)
+  } finally {
+    loadingBanks.value = false
+  }
+})
 
 async function handleSubmit(publish = false) {
   if (!auth.user) return
@@ -182,6 +321,8 @@ async function handleSubmit(publish = false) {
         order_index: index + 1,
         is_mandatory: p.is_mandatory,
         time_limit_minutes: p.time_limit_minutes,
+        question_bank_id: p.question_bank_id || null,
+        config: p.question_bank_id ? { question_bank_id: p.question_bank_id } : {},
       }))
 
       const { error: procError } = await supabase
@@ -190,6 +331,9 @@ async function handleSubmit(publish = false) {
 
       if (procError) throw procError
     }
+
+    // Clear session storage draft
+    sessionStorage.removeItem(DRAFT_STORAGE_KEY)
 
     // Success
     router.push(`/organizations/${organizationId}?tab=jobs`)
@@ -592,6 +736,35 @@ async function handleSubmit(publish = false) {
               Display salary range publicly on the job posting
             </label>
           </div>
+
+          <!-- Application Deadline & Accept Applications -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 pt-3 border-t border-border">
+            <div>
+              <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">
+                Application Deadline (Closing Date)
+              </label>
+              <input
+                v-model="applicationDeadline"
+                type="date"
+                class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3.5 py-2.5 text-xs sm:text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+              />
+              <p class="text-[11px] sm:text-xs text-text-muted mt-1">
+                Leave empty for a rolling deadline. After this date, the job will automatically be closed.
+              </p>
+            </div>
+
+            <div class="flex items-center gap-3 pt-5 sm:pt-6">
+              <input
+                id="acceptApplications"
+                v-model="acceptApplications"
+                type="checkbox"
+                class="h-4.5 w-4.5 sm:h-5 sm:w-5 rounded border-border text-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+              />
+              <label for="acceptApplications" class="text-xs sm:text-sm font-medium text-text-secondary cursor-pointer select-none">
+                Currently accepting applications
+              </label>
+            </div>
+          </div>
         </section>
 
         <!-- 5. HIRING PROCESS & SELECTION PATHWAY -->
@@ -741,6 +914,49 @@ async function handleSubmit(publish = false) {
                     placeholder="Brief guidance for the applicant..."
                     class="block w-full rounded-lg border border-border bg-card text-text-strong px-3 py-2 text-xs sm:text-sm shadow-sm placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
                   ></textarea>
+                </div>
+
+                <!-- QUESTION BANK SELECTOR (shown when stage type is or includes Quiz) -->
+                <div
+                  v-if="process.process_type.includes('quiz')"
+                  class="p-3.5 rounded-xl border border-primary/20 bg-primary-light/40 space-y-2"
+                >
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs font-semibold text-text-strong flex items-center gap-1.5">
+                      <Layers class="h-3.5 w-3.5 text-primary" />
+                      Question Bank Assessment *
+                    </label>
+                    <button
+                      type="button"
+                      @click="handleCreateQuestionBank(index)"
+                      class="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      <Plus class="h-3 w-3" />
+                      Create New Bank
+                    </button>
+                  </div>
+
+                  <select
+                    v-model="process.question_bank_id"
+                    class="block w-full rounded-lg border border-border bg-card text-text-strong px-3 py-2 text-xs sm:text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
+                  >
+                    <option :value="null">-- Select a Question Bank --</option>
+                    <option v-for="b in questionBanks" :key="b.id" :value="b.id">
+                      {{ b.name }} ({{ b.questions_count }} questions, {{ b.total_points }} pts) {{ b.category ? `• ${b.category}` : '' }}
+                    </option>
+                  </select>
+
+                  <p
+                    v-if="process.question_bank_id && getBankQuestionsCount(process.question_bank_id) === 0"
+                    class="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-1 font-medium bg-amber-500/10 p-2 rounded-lg border border-amber-500/20"
+                  >
+                    <AlertCircle class="h-4 w-4 shrink-0 text-amber-500" />
+                    This question bank has 0 questions. Please add questions to it so candidates can take this quiz.
+                  </p>
+
+                  <p v-else class="text-[11px] text-text-muted">
+                    Questions from this bank will be served to applicants who reach this stage.
+                  </p>
                 </div>
 
                 <div class="flex flex-col sm:flex-row sm:items-center gap-4 pt-1">

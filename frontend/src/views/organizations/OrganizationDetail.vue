@@ -27,6 +27,7 @@ import {
   ChevronRight,
   LucideFileUser,
   ArrowBigRightDash,
+  Layers,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationsStore } from '@/stores/organizations'
@@ -65,6 +66,22 @@ const selectedFilter = ref<'all' | 'active' | 'pending' | 'revoked'>('all')
 const searchQuery = ref('')
 const debouncedQuery = ref('')
 const jobsStore = useJobsStore()
+
+// Computed: org members (admin/staff) see ALL jobs; public visitors only see active published jobs
+const visibleOrgJobs = computed(() => {
+  const all = jobsStore.organizationJobs
+  if (isOrgAdmin.value) return all
+  // For public visitors: only show published, non-expired jobs
+  const now = new Date()
+  return all.filter(job => {
+    if (job.status !== 'published') return false
+    if (job.application_deadline) {
+      const deadline = new Date(job.application_deadline)
+      if (deadline <= now) return false
+    }
+    return true
+  })
+})
 
 // Debounce search
 let searchTimer: number | undefined
@@ -500,6 +517,15 @@ async function sendVerificationEmail() {
                 >
                   {{ humanizeStatus(org.status) }}
                 </span>
+
+                <router-link
+                  v-if="isOrgAdmin"
+                  :to="`/organizations/${org.id}/questions`"
+                  class="btn btn-secondary btn-sm"
+                >
+                  <Layers class="h-3.5 w-3.5" />
+                  Question Banks
+                </router-link>
 
                 <router-link
                   v-if="isOrgAdmin"
@@ -1052,7 +1078,7 @@ async function sendVerificationEmail() {
 
               <div v-if="jobsStore.loading" class="text-center py-10 text-muted text-xs sm:text-sm">Loading jobs...</div>
 
-              <div v-else-if="jobsStore.organizationJobs.length === 0" class="bg-subtle rounded-xl p-8 sm:p-10 text-center border border-border">
+              <div v-else-if="visibleOrgJobs.length === 0" class="bg-subtle rounded-xl p-8 sm:p-10 text-center border border-border">
                 <p class="text-xs sm:text-sm text-muted">No jobs posted yet.</p>
                 <button
                   v-if="isOrgAdmin"
@@ -1066,7 +1092,7 @@ async function sendVerificationEmail() {
               <div v-else class="bg-card rounded-xl border border-border overflow-hidden">
                 <ul class="divide-y divide-border">
                   <li
-                    v-for="job in jobsStore.organizationJobs"
+                    v-for="job in visibleOrgJobs"
                     :key="job.id"
                     class="p-4 sm:p-5 hover:bg-subtle flex flex-col lg:flex-row lg:items-center justify-between gap-3"
                   >

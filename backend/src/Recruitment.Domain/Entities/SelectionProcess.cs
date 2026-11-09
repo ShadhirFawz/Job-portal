@@ -31,6 +31,9 @@ public class SelectionProcess
     [JsonPropertyName("passing_score")]
     public int? PassingScore { get; set; }
 
+    [JsonPropertyName("question_bank_id")]
+    public Guid? QuestionBankId { get; set; }
+
     [JsonPropertyName("config")]
     public Dictionary<string, object>? Config { get; set; }
 

@@ -21,9 +21,48 @@ export interface SelectionProcess {
   is_mandatory: boolean
   time_limit_minutes?: number | null
   passing_score?: number | null
+  question_bank_id?: string | null
   config?: Record<string, any>
   created_at?: string
   updated_at?: string
+}
+
+export interface UpdateJobPayload {
+  title?: string
+  short_description?: string | null
+  description?: string | null
+  responsibilities?: string | null
+  requirements?: string | null
+  benefits?: string | null
+  nice_to_have?: string | null
+  what_we_offer?: string | null
+  tech_stacks?: string[]
+  has_custom_hiring_process?: boolean
+  how_to_apply?: string | null
+  is_selection_process_public?: boolean
+  job_type?: JobType | string
+  work_mode?: WorkMode | string
+  experience_level?: ExperienceLevel | string | null
+  department?: string | null
+  category?: string | null
+  country_code?: string | null
+  city?: string | null
+  salary_min?: number | null
+  salary_max?: number | null
+  salary_currency?: string
+  show_salary?: boolean
+  application_deadline?: string | null
+  accept_applications?: boolean
+  status?: string
+  selection_processes?: Array<{
+    title: string
+    process_type: string
+    description?: string | null
+    order_index: number
+    is_mandatory: boolean
+    time_limit_minutes?: number | null
+    question_bank_id?: string | null
+  }>
 }
 
 export interface Job {
@@ -91,5 +130,4 @@ export interface PagedJobsResponse {
   pageSize: number
   totalPages: number
 }
-
 

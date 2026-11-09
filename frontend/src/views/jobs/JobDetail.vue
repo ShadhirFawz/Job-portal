@@ -24,18 +24,56 @@ import {
   Share2,
   Check,
   Users,
+  Pencil,
+  Send,
+  Loader2,
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
+import { useConfirm } from '@/composables/useConfirm'
+import { jobService } from '@/services/job.service'
 
 const route = useRoute()
 const router = useRouter()
 const jobsStore = useJobsStore()
 const auth = useAuthStore()
+const { confirm } = useConfirm()
 
 const isOrgStaffOrAdmin = ref(false)
 const hasApplied = ref(false)
+const publishing = ref(false)
 
 const job = computed(() => jobsStore.currentJob)
+
+const isJobOwner = computed(() => {
+  if (!auth.user || !job.value) return false
+  return job.value.created_by === auth.user.id
+})
+
+async function handlePublishJob() {
+  if (!job.value || !auth.user) return
+
+  const ok = await confirm({
+    title: 'Publish Job Posting?',
+    message: `Are you sure you want to publish "${job.value.title}"?\n\nThis will make the job posting publicly available to all candidates on the platform.`,
+    confirmLabel: 'Publish Job',
+    variant: 'primary',
+  })
+  if (!ok) return
+
+  publishing.value = true
+  try {
+    const updated = await jobService.publishJob(job.value.id, auth.user.id)
+    if (job.value) {
+      job.value.status = 'published'
+      job.value.published_at = updated.published_at || new Date().toISOString()
+    }
+    toast.success('Job posting published successfully!')
+  } catch (err: any) {
+    toast.error(err.message || 'Failed to publish job')
+  } finally {
+    publishing.value = false
+  }
+}
 
 onMounted(async () => {
   const jobId = route.params.id as string
@@ -100,6 +138,29 @@ function handleShare() {
         </button>
 
         <div class="flex items-center flex-wrap gap-2">
+          <!-- Edit button for job owner -->
+          <router-link
+            v-if="isJobOwner"
+            :to="`/jobs/${job.id}/edit`"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-text-strong bg-card border border-border rounded-lg hover:bg-surface-raised transition shadow-xs"
+          >
+            <Pencil class="h-3.5 w-3.5 text-text-muted" />
+            Edit Job
+          </router-link>
+
+          <!-- Publish button for draft jobs -->
+          <button
+            v-if="isJobOwner && job.status === 'draft'"
+            type="button"
+            @click="handlePublishJob"
+            :disabled="publishing"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary-hover disabled:opacity-50 rounded-lg transition shadow-xs cursor-pointer"
+          >
+            <Loader2 v-if="publishing" class="h-3.5 w-3.5 animate-spin" />
+            <Send v-else class="h-3.5 w-3.5" />
+            Publish Job
+          </button>
+
           <router-link
             v-if="isOrgStaffOrAdmin"
             :to="`/jobs/${job.id}/applications`"
@@ -115,6 +176,35 @@ function handleShare() {
             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-text-secondary bg-card border border-border rounded-lg hover:bg-surface-raised transition shadow-xs"
           >
             <Share2 class="h-3.5 w-3.5 text-text-muted" /> Share
+          </button>
+        </div>
+      </div>
+
+      <!-- Draft Status Banner -->
+      <div
+        v-if="job.status === 'draft' && (isJobOwner || isOrgStaffOrAdmin)"
+        class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200"
+      >
+        <div class="flex items-center gap-2.5 text-xs sm:text-sm font-medium">
+          <span class="flex h-2 w-2 rounded-full bg-amber-500 flex-shrink-0 animate-pulse"></span>
+          <span>This job posting is in <strong>Draft</strong> mode and is not visible to candidates.</span>
+        </div>
+        <div v-if="isJobOwner" class="flex items-center gap-2 self-end sm:self-auto">
+          <router-link
+            :to="`/jobs/${job.id}/edit`"
+            class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-card border border-border text-text-strong hover:bg-surface-raised transition shadow-xs"
+          >
+            Edit Post
+          </router-link>
+          <button
+            type="button"
+            @click="handlePublishJob"
+            :disabled="publishing"
+            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg text-white bg-primary hover:bg-primary-hover disabled:opacity-50 transition shadow-xs cursor-pointer"
+          >
+            <Loader2 v-if="publishing" class="h-3.5 w-3.5 animate-spin" />
+            <Send v-else class="h-3.5 w-3.5" />
+            Publish Now
           </button>
         </div>
       </div>
@@ -351,8 +441,21 @@ function handleShare() {
             </div>
 
             <div class="flex items-center gap-3 w-full lg:w-auto">
+              <!-- If draft and owner, show publish as primary -->
+              <button
+                v-if="job.status === 'draft' && isJobOwner"
+                type="button"
+                @click="handlePublishJob"
+                :disabled="publishing"
+                class="w-full lg:w-auto inline-flex justify-center items-center gap-2 px-8 py-3 text-xs sm:text-sm font-semibold rounded-xl text-white bg-primary hover:bg-primary-hover shadow-sm transition cursor-pointer"
+              >
+                <Loader2 v-if="publishing" class="h-4 w-4 animate-spin" />
+                <Send v-else class="h-4 w-4" />
+                Publish Job Posting
+              </button>
+
               <router-link
-                v-if="isOrgStaffOrAdmin"
+                v-else-if="isOrgStaffOrAdmin"
                 :to="`/jobs/${job.id}/applications`"
                 class="w-full lg:w-auto inline-flex justify-center items-center gap-2 px-6 py-3 text-xs sm:text-sm font-semibold rounded-xl text-white bg-primary hover:bg-primary-hover shadow-sm transition"
               >

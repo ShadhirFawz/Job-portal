@@ -20,7 +20,8 @@ public class JobService : IJobService
         var page = Math.Max(1, filters.Page);
         var pageSize = filters.PageSize > 0 && filters.PageSize <= 50 ? filters.PageSize : 12;
 
-        var query = "jobs?status=eq.published&deleted_at=is.null";
+        // Only published jobs whose deadline hasn't passed (or have no deadline set)
+        var query = "jobs?status=eq.published&deleted_at=is.null&or=(application_deadline.is.null,application_deadline.gt.now())";
 
         var search = !string.IsNullOrWhiteSpace(filters.Search) ? filters.Search : filters.Q;
         var jobType = !string.IsNullOrWhiteSpace(filters.JobType) ? filters.JobType : filters.Type;
@@ -106,6 +107,120 @@ public class JobService : IJobService
         return list.Select(MapToDto).ToList();
     }
 
+    public async Task<JobDto> UpdateJobAsync(Guid id, Guid userId, UpdateJobRequest request)
+    {
+        var existing = await _supabase.GetSingleAsync<Job>($"jobs?id=eq.{id}&deleted_at=is.null");
+        if (existing == null) throw new KeyNotFoundException("Job posting not found.");
+
+        if (existing.CreatedBy != userId)
+        {
+            throw new UnauthorizedAccessException("Only the owner/creator of this job post is authorized to edit it.");
+        }
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["title"] = request.Title?.Trim(),
+            ["short_description"] = request.ShortDescription?.Trim(),
+            ["description"] = request.Description?.Trim(),
+            ["responsibilities"] = request.Responsibilities?.Trim(),
+            ["requirements"] = request.Requirements?.Trim(),
+            ["benefits"] = request.Benefits?.Trim(),
+            ["nice_to_have"] = request.NiceToHave?.Trim(),
+            ["what_we_offer"] = request.WhatWeOffer?.Trim(),
+            ["tech_stacks"] = request.TechStacks ?? [],
+            ["has_custom_hiring_process"] = request.HasCustomHiringProcess,
+            ["how_to_apply"] = request.HasCustomHiringProcess ? request.HowToApply?.Trim() : null,
+            ["is_selection_process_public"] = request.IsSelectionProcessPublic,
+            ["job_type"] = request.JobType,
+            ["work_mode"] = request.WorkMode,
+            ["experience_level"] = request.ExperienceLevel,
+            ["department"] = request.Department?.Trim(),
+            ["category"] = request.Category?.Trim(),
+            ["country_code"] = request.CountryCode?.Trim(),
+            ["city"] = request.City?.Trim(),
+            ["salary_min"] = request.SalaryMin,
+            ["salary_max"] = request.SalaryMax,
+            ["salary_currency"] = request.SalaryCurrency ?? "INR",
+            ["show_salary"] = request.ShowSalary,
+            ["application_deadline"] = request.ApplicationDeadline,
+            ["accept_applications"] = request.AcceptApplications,
+            ["updated_by"] = userId,
+            ["updated_at"] = DateTime.UtcNow
+        };
+
+        if (!string.IsNullOrWhiteSpace(request.Title))
+        {
+            var slug = System.Text.RegularExpressions.Regex.Replace(request.Title.ToLowerInvariant().Trim(), @"[^a-z0-9]+", "-").Trim('-');
+            payload["slug"] = slug;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Status))
+        {
+            payload["status"] = request.Status;
+            if (request.Status == "published" && existing.PublishedAt == null)
+            {
+                payload["published_at"] = DateTime.UtcNow;
+            }
+        }
+
+        await _supabase.UpdateAsync<Job>($"jobs?id=eq.{id}", payload);
+
+        // Update selection processes if configured
+        if (!request.HasCustomHiringProcess && request.SelectionProcesses != null)
+        {
+            // Remove existing selection processes
+            await _supabase.DeleteAsync($"job_selection_processes?job_id=eq.{id}");
+
+            // Insert updated selection processes
+            if (request.SelectionProcesses.Count > 0)
+            {
+                var idx = 1;
+                foreach (var p in request.SelectionProcesses)
+                {
+                    var procPayload = new
+                    {
+                        job_id = id,
+                        title = string.IsNullOrWhiteSpace(p.Title) ? $"Stage {idx}" : p.Title.Trim(),
+                        process_type = p.ProcessType,
+                        description = p.Description?.Trim(),
+                        order_index = idx++,
+                        is_mandatory = p.IsMandatory,
+                        time_limit_minutes = p.TimeLimitMinutes,
+                        question_bank_id = p.QuestionBankId,
+                        config = p.QuestionBankId.HasValue
+                            ? new Dictionary<string, object> { ["question_bank_id"] = p.QuestionBankId.Value }
+                            : new Dictionary<string, object>()
+                    };
+                    await _supabase.InsertAsync<SelectionProcess>("job_selection_processes", procPayload);
+                }
+            }
+        }
+
+        return (await GetJobByIdAsync(id))!;
+    }
+
+    public async Task<JobDto> PublishJobAsync(Guid id, Guid userId)
+    {
+        var existing = await _supabase.GetSingleAsync<Job>($"jobs?id=eq.{id}&deleted_at=is.null");
+        if (existing == null) throw new KeyNotFoundException("Job posting not found.");
+
+        if (existing.CreatedBy != userId)
+        {
+            throw new UnauthorizedAccessException("Only the owner/creator of this job post is authorized to publish it.");
+        }
+
+        var payload = new Dictionary<string, object?>
+        {
+            ["status"] = "published",
+            ["published_at"] = DateTime.UtcNow,
+            ["updated_by"] = userId,
+            ["updated_at"] = DateTime.UtcNow
+        };
+
+        await _supabase.UpdateAsync<Job>($"jobs?id=eq.{id}", payload);
+        return (await GetJobByIdAsync(id))!;
+    }
+
     private static JobDto MapToDto(Job j)
     {
         return new JobDto
@@ -163,6 +278,7 @@ public class JobService : IJobService
                 IsMandatory = sp.IsMandatory,
                 TimeLimitMinutes = sp.TimeLimitMinutes,
                 PassingScore = sp.PassingScore,
+                QuestionBankId = sp.QuestionBankId,
                 Config = sp.Config,
                 CreatedAt = sp.CreatedAt,
                 UpdatedAt = sp.UpdatedAt

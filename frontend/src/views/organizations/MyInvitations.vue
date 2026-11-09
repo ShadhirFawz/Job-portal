@@ -6,10 +6,12 @@ import { useAuthStore } from '@/stores/auth'
 import { memberService } from '@/services/member.service'
 import { profileService } from '@/services/profile.service'
 import { getOrganizationImageUrl } from '@/composables/useOrganizationImage'
+import { useConfirm } from '@/composables/useConfirm'
 import type { UserInvitationItem } from '@/types/member'
 
 const router = useRouter()
 const auth = useAuthStore()
+const { confirm: showConfirm } = useConfirm()
 
 const invitations = ref<UserInvitationItem[]>([])
 const loading = ref(true)
@@ -52,7 +54,14 @@ async function acceptInvitation(invitation: UserInvitationItem) {
 }
 
 async function declineInvitation(invitation: UserInvitationItem) {
-  if (!confirm('Decline this invitation?')) return
+  const confirmed = await showConfirm({
+    title: 'Decline Invitation?',
+    message: `Are you sure you want to decline the invitation to join ${invitation.organization.name}?`,
+    confirmLabel: 'Decline',
+    cancelLabel: 'Keep',
+    variant: 'danger',
+  })
+  if (!confirmed) return
 
   actionLoading.value = invitation.id
   try {

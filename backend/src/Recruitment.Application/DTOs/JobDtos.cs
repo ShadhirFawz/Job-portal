@@ -109,6 +109,9 @@ public class SelectionProcessDto
     [JsonPropertyName("passing_score")]
     public int? PassingScore { get; set; }
 
+    [JsonPropertyName("question_bank_id")]
+    public Guid? QuestionBankId { get; set; }
+
     [JsonPropertyName("config")]
     public Dictionary<string, object>? Config { get; set; }
 
@@ -249,5 +252,113 @@ public class JobDto
 
     [JsonPropertyName("selection_processes")]
     public List<SelectionProcessDto>? SelectionProcesses { get; set; }
+}
+
+public class UpdateJobProcessRequest
+{
+    [JsonPropertyName("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonPropertyName("process_type")]
+    public string ProcessType { get; set; } = string.Empty;
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("order_index")]
+    public int OrderIndex { get; set; }
+
+    [JsonPropertyName("is_mandatory")]
+    public bool IsMandatory { get; set; } = true;
+
+    [JsonPropertyName("time_limit_minutes")]
+    public int? TimeLimitMinutes { get; set; }
+
+    [JsonPropertyName("question_bank_id")]
+    public Guid? QuestionBankId { get; set; }
+}
+
+public class UpdateJobRequest
+{
+    [JsonPropertyName("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonPropertyName("short_description")]
+    public string? ShortDescription { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("responsibilities")]
+    public string? Responsibilities { get; set; }
+
+    [JsonPropertyName("requirements")]
+    public string? Requirements { get; set; }
+
+    [JsonPropertyName("benefits")]
+    public string? Benefits { get; set; }
+
+    [JsonPropertyName("nice_to_have")]
+    public string? NiceToHave { get; set; }
+
+    [JsonPropertyName("what_we_offer")]
+    public string? WhatWeOffer { get; set; }
+
+    [JsonPropertyName("tech_stacks")]
+    public List<string>? TechStacks { get; set; }
+
+    [JsonPropertyName("has_custom_hiring_process")]
+    public bool HasCustomHiringProcess { get; set; }
+
+    [JsonPropertyName("how_to_apply")]
+    public string? HowToApply { get; set; }
+
+    [JsonPropertyName("is_selection_process_public")]
+    public bool IsSelectionProcessPublic { get; set; } = true;
+
+    [JsonPropertyName("job_type")]
+    public string JobType { get; set; } = "full_time";
+
+    [JsonPropertyName("work_mode")]
+    public string WorkMode { get; set; } = "onsite";
+
+    [JsonPropertyName("experience_level")]
+    public string? ExperienceLevel { get; set; }
+
+    [JsonPropertyName("department")]
+    public string? Department { get; set; }
+
+    [JsonPropertyName("category")]
+    public string? Category { get; set; }
+
+    [JsonPropertyName("country_code")]
+    public string? CountryCode { get; set; }
+
+    [JsonPropertyName("city")]
+    public string? City { get; set; }
+
+    [JsonPropertyName("salary_min")]
+    public int? SalaryMin { get; set; }
+
+    [JsonPropertyName("salary_max")]
+    public int? SalaryMax { get; set; }
+
+    [JsonPropertyName("salary_currency")]
+    public string? SalaryCurrency { get; set; } = "INR";
+
+    [JsonPropertyName("show_salary")]
+    public bool ShowSalary { get; set; }
+
+    [JsonPropertyName("application_deadline")]
+    public DateTime? ApplicationDeadline { get; set; }
+
+    [JsonPropertyName("accept_applications")]
+    public bool AcceptApplications { get; set; } = true;
+
+    [JsonPropertyName("status")]
+    public string? Status { get; set; }
+
+    [JsonPropertyName("selection_processes")]
+    public List<UpdateJobProcessRequest>? SelectionProcesses { get; set; }
 }
 

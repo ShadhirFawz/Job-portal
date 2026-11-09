@@ -22,6 +22,8 @@ public static class DependencyInjection
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IResumeService, ResumeService>();
         services.AddScoped<IJobService, JobService>();
+        services.AddScoped<IQuestionBankService, QuestionBankService>();
+        services.AddScoped<IAssessmentService, AssessmentService>();
 
         return services;
     }
