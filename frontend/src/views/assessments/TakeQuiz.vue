@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, onUnmounted } from 'vue'
+import { ref, onMounted, computed, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { assessmentService } from '@/services/assessment.service'
@@ -63,6 +63,52 @@ const questions = ref<CandidateQuestion[]>([])
 
 // Candidate answers: map of questionId -> answer value
 const answers = ref<Record<string, any>>({})
+
+const storageKey = computed(() => {
+  if (attempt.value?.id) return `quiz_answers_${attempt.value.id}`
+  if (processId && auth.user?.id) return `quiz_answers_${processId}_${auth.user.id}`
+  return null
+})
+
+function saveAnswersToStorage() {
+  if (storageKey.value) {
+    try {
+      localStorage.setItem(storageKey.value, JSON.stringify(answers.value))
+    } catch (e) {
+      console.warn('Failed to save quiz answers to localStorage:', e)
+    }
+  }
+}
+
+function loadAnswersFromStorage() {
+  if (storageKey.value) {
+    try {
+      const saved = localStorage.getItem(storageKey.value)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed && typeof parsed === 'object') {
+          answers.value = { ...answers.value, ...parsed }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load quiz answers from localStorage:', e)
+    }
+  }
+}
+
+function clearAnswersFromStorage() {
+  if (storageKey.value) {
+    try {
+      localStorage.removeItem(storageKey.value)
+    } catch (e) {}
+  }
+}
+
+watch(answers, () => {
+  if (hasStarted.value && attempt.value?.status === 'in_progress') {
+    saveAnswersToStorage()
+  }
+}, { deep: true })
 
 // Timer
 const timeRemainingSeconds = ref<number | null>(null)
@@ -365,6 +411,11 @@ async function initAssessment() {
 
       // If already submitted or graded, display result card directly
       if (existing.status === 'submitted' || existing.status === 'graded') {
+        if (existing.answers && existing.answers.length > 0) {
+          for (const a of existing.answers) {
+            answers.value[a.question_id] = a.answer
+          }
+        }
         hasStarted.value = true
         loading.value = false
         return
@@ -372,6 +423,7 @@ async function initAssessment() {
 
       // If in progress
       if (existing.status === 'in_progress') {
+        loadAnswersFromStorage()
         if (existing.expires_at) {
           const expiresAtMs = new Date(existing.expires_at).getTime()
           const diffSecs = Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000))
@@ -442,6 +494,7 @@ async function handleEnterSafeExam() {
     setupSafeExamListeners()
 
     // 4. Activate exam interface & start timer
+    loadAnswersFromStorage()
     hasStarted.value = true
 
     if (timeRemainingSeconds.value !== null && timeRemainingSeconds.value > 0) {
@@ -529,6 +582,7 @@ async function submitQuiz(auto = false, autoReason = '') {
     })
 
     attempt.value = result
+    clearAnswersFromStorage()
     cleanupSafeExamListeners()
     exitFullscreenMode()
 

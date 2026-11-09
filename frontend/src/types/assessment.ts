@@ -99,10 +99,17 @@ export interface UpdateQuestionPayload {
   order_index?: number
 }
 
+export interface QuestionOptionResult {
+  id: string
+  text: string
+  is_correct: boolean
+}
+
 export interface QuizAnswerDetail {
   question_id: string
   question_body: string
   question_type: string
+  options?: QuestionOptionResult[]
   answer?: any
   is_correct?: boolean | null
   points_awarded: number
@@ -129,6 +136,8 @@ export interface QuizAttempt {
   passed?: boolean | null
   stage_title?: string | null
   job_title?: string | null
+  candidate_name?: string | null
+  candidate_email?: string | null
   questions?: CandidateQuestion[]
   answers?: QuizAnswerDetail[]
 }

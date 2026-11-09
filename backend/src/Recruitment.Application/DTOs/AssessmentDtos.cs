@@ -63,6 +63,18 @@ public class SubmitAssessmentRequest
     public List<SubmitAnswerItem> Answers { get; set; } = [];
 }
 
+public class QuestionOptionResultDto
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("text")]
+    public string Text { get; set; } = string.Empty;
+
+    [JsonPropertyName("is_correct")]
+    public bool IsCorrect { get; set; }
+}
+
 public class QuizAnswerDetailDto
 {
     [JsonPropertyName("question_id")]
@@ -73,6 +85,9 @@ public class QuizAnswerDetailDto
 
     [JsonPropertyName("question_type")]
     public string QuestionType { get; set; } = string.Empty;
+
+    [JsonPropertyName("options")]
+    public List<QuestionOptionResultDto>? Options { get; set; }
 
     [JsonPropertyName("answer")]
     public object? Answer { get; set; }
@@ -145,6 +160,12 @@ public class QuizAttemptDto
 
     [JsonPropertyName("job_title")]
     public string? JobTitle { get; set; }
+
+    [JsonPropertyName("candidate_name")]
+    public string? CandidateName { get; set; }
+
+    [JsonPropertyName("candidate_email")]
+    public string? CandidateEmail { get; set; }
 
     [JsonPropertyName("questions")]
     public List<CandidateQuestionDto>? Questions { get; set; }

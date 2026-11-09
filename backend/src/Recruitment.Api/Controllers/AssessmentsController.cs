@@ -54,6 +54,35 @@ public class AssessmentsController : ControllerBase
         return Ok(attempt);
     }
 
+    [HttpGet("job/{jobId:guid}")]
+    public async Task<IActionResult> GetJobAttempts(Guid jobId, [FromQuery] Guid userId)
+    {
+        try
+        {
+            var attempts = await _assessmentService.GetJobAttemptsAsync(jobId, userId);
+            return Ok(attempts);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("application/{applicationId:guid}")]
+    public async Task<IActionResult> GetApplicationAttempt(Guid applicationId, [FromQuery] Guid userId)
+    {
+        try
+        {
+            var attempt = await _assessmentService.GetApplicationAttemptAsync(applicationId, userId);
+            if (attempt == null) return NotFound(new { message = "No assessment attempt found for this application." });
+            return Ok(attempt);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("submit")]
     public async Task<IActionResult> SubmitAssessment(
         [FromQuery] Guid userId,

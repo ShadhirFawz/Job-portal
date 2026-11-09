@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Recruitment.Application.DTOs;
 using Recruitment.Application.Interfaces;
 using Recruitment.Domain.Entities;
@@ -9,10 +10,12 @@ namespace Recruitment.Infrastructure.Services;
 public class AssessmentService : IAssessmentService
 {
     private readonly ISupabaseContext _supabase;
+    private readonly ILogger<AssessmentService>? _logger;
 
-    public AssessmentService(ISupabaseContext supabase)
+    public AssessmentService(ISupabaseContext supabase, ILogger<AssessmentService>? logger = null)
     {
         _supabase = supabase;
+        _logger = logger;
     }
 
     public async Task<QuizAttemptDto> StartAssessmentAsync(Guid userId, StartAssessmentRequest request)
@@ -117,17 +120,47 @@ public class AssessmentService : IAssessmentService
 
         var answers = await _supabase.GetListAsync<QuizAnswer>($"quiz_answers?attempt_id=eq.{attemptId}&select=*,question:questions(*)");
 
+        var questionMap = questions.ToDictionary(q => q.Id);
         var dto = MapAttemptToDto(attempt, process, job?.Title, questions);
-        dto.Answers = answers.Select(a => new QuizAnswerDetailDto
+
+        // Fetch candidate user profile for display info
+        try
         {
-            QuestionId = a.QuestionId,
-            QuestionBody = a.Question?.Body ?? string.Empty,
-            QuestionType = a.Question?.QuestionType ?? string.Empty,
-            Answer = a.Answer,
-            IsCorrect = a.IsCorrect,
-            PointsAwarded = a.PointsAwarded,
-            MaxPoints = a.Question?.Points ?? 1,
-            Explanation = a.Question?.Explanation
+            var userProfile = await _supabase.GetSingleAsync<UserProfile>($"users?id=eq.{attempt.UserId}");
+            if (userProfile != null)
+            {
+                var name = (!string.IsNullOrWhiteSpace(userProfile.DisplayName))
+                    ? userProfile.DisplayName
+                    : $"{userProfile.FirstName} {userProfile.LastName}".Trim();
+                dto.CandidateName = string.IsNullOrWhiteSpace(name) ? userProfile.Email : name;
+                dto.CandidateEmail = userProfile.Email;
+            }
+        }
+        catch
+        {
+            // non-fatal
+        }
+
+        dto.Answers = answers.Select(a =>
+        {
+            var q = a.Question ?? (questionMap.TryGetValue(a.QuestionId, out var mappedQ) ? mappedQ : null);
+            return new QuizAnswerDetailDto
+            {
+                QuestionId = a.QuestionId,
+                QuestionBody = q?.Body ?? a.Question?.Body ?? string.Empty,
+                QuestionType = q?.QuestionType ?? a.Question?.QuestionType ?? string.Empty,
+                Options = q?.Options?.Select(o => new QuestionOptionResultDto
+                {
+                    Id = o.Id,
+                    Text = o.Text,
+                    IsCorrect = o.IsCorrect
+                }).ToList(),
+                Answer = a.Answer,
+                IsCorrect = a.IsCorrect,
+                PointsAwarded = a.PointsAwarded,
+                MaxPoints = q?.Points ?? a.Question?.Points ?? 1,
+                Explanation = q?.Explanation ?? a.Question?.Explanation
+            };
         }).ToList();
 
         return dto;
@@ -155,6 +188,28 @@ public class AssessmentService : IAssessmentService
         if (attempt.Status == "submitted" || attempt.Status == "graded")
         {
             return (await GetAttemptByIdAsync(attempt.Id, userId))!;
+        }
+
+        // Try PostgreSQL RPC function first (atomic, SECURITY DEFINER)
+        try
+        {
+            var rpcPayload = new
+            {
+                p_attempt_id = attempt.Id,
+                p_user_id = userId,
+                p_answers = request.Answers.Select(a => new
+                {
+                    question_id = a.QuestionId,
+                    answer = a.Answer
+                }).ToList()
+            };
+
+            await _supabase.RpcAsync<JsonElement>("submit_quiz_assessment", rpcPayload);
+            return (await GetAttemptByIdAsync(attempt.Id, userId))!;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to submit assessment via RPC submit_quiz_assessment, falling back to C# evaluation");
         }
 
         // Fetch selection process & questions
@@ -332,6 +387,91 @@ public class AssessmentService : IAssessmentService
                 }).ToList()
             }).ToList()
         };
+    }
+
+    public async Task<List<QuizAttemptDto>> GetJobAttemptsAsync(Guid jobId, Guid requestingUserId)
+    {
+        // 1. Try PostgreSQL RPC function first (single query, security definer)
+        try
+        {
+            var rpcResult = await _supabase.RpcAsync<List<QuizAttemptDto>>(
+                "get_job_quiz_attempts", new { p_job_id = jobId });
+            if (rpcResult != null)
+            {
+                return rpcResult;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to fetch job attempts via RPC get_job_quiz_attempts, falling back to service logic");
+        }
+
+        // 2. Fallback service query logic
+        var attempts = await _supabase.GetListAsync<QuizAttempt>(
+            $"quiz_attempts?job_id=eq.{jobId}&order=created_at.desc");
+
+        if (attempts.Count == 0) return [];
+
+        var processes = await _supabase.GetListAsync<SelectionProcess>($"job_selection_processes?job_id=eq.{jobId}");
+        var processMap = processes.ToDictionary(p => p.Id);
+
+        var job = await _supabase.GetSingleAsync<Job>($"jobs?id=eq.{jobId}&select=id,title");
+
+        // Fetch user profiles for candidate details
+        var userIds = attempts.Select(a => a.UserId).Distinct().ToList();
+        var userMap = new Dictionary<Guid, UserProfile>();
+        if (userIds.Count > 0)
+        {
+            try
+            {
+                var users = await _supabase.GetListAsync<UserProfile>(
+                    $"users?id=in.({string.Join(",", userIds)})&select=id,first_name,last_name,display_name,email");
+                userMap = users.ToDictionary(u => u.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Failed to load candidate user profiles for job attempts");
+            }
+        }
+
+        var resultList = new List<QuizAttemptDto>();
+
+        foreach (var attempt in attempts)
+        {
+            processMap.TryGetValue(attempt.SelectionProcessId, out var process);
+            var dto = MapAttemptToDto(attempt, process, job?.Title, []);
+            if (userMap.TryGetValue(attempt.UserId, out var u))
+            {
+                var name = (!string.IsNullOrWhiteSpace(u.DisplayName))
+                    ? u.DisplayName
+                    : $"{u.FirstName} {u.LastName}".Trim();
+                dto.CandidateName = string.IsNullOrWhiteSpace(name) ? u.Email : name;
+                dto.CandidateEmail = u.Email;
+            }
+            resultList.Add(dto);
+        }
+
+        return resultList;
+    }
+
+    public async Task<QuizAttemptDto?> GetApplicationAttemptAsync(Guid applicationId, Guid requestingUserId)
+    {
+        var attempt = await _supabase.GetSingleAsync<QuizAttempt>(
+            $"quiz_attempts?application_id=eq.{applicationId}&order=created_at.desc");
+
+        if (attempt == null)
+        {
+            var app = await _supabase.GetSingleAsync<JobApplication>($"job_applications?id=eq.{applicationId}");
+            if (app != null)
+            {
+                attempt = await _supabase.GetSingleAsync<QuizAttempt>(
+                    $"quiz_attempts?job_id=eq.{app.JobId}&user_id=eq.{app.UserId}&order=created_at.desc");
+            }
+        }
+
+        if (attempt == null) return null;
+
+        return await GetAttemptByIdAsync(attempt.Id, requestingUserId);
     }
 }
 
