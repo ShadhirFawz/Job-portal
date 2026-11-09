@@ -19,6 +19,9 @@ public class UserProfileDto
     [JsonPropertyName("display_name")]
     public string? DisplayName { get; set; }
 
+    [JsonPropertyName("username")]
+    public string? Username { get; set; }
+
     [JsonPropertyName("avatar_path")]
     public string? AvatarPath { get; set; }
 
@@ -40,11 +43,29 @@ public class UserProfileDto
     [JsonPropertyName("bio")]
     public string? Bio { get; set; }
 
+    [JsonPropertyName("website_url")]
+    public string? WebsiteUrl { get; set; }
+
+    [JsonPropertyName("linkedin_url")]
+    public string? LinkedinUrl { get; set; }
+
+    [JsonPropertyName("github_url")]
+    public string? GithubUrl { get; set; }
+
+    [JsonPropertyName("portfolio_url")]
+    public string? PortfolioUrl { get; set; }
+
     [JsonPropertyName("country_code")]
     public string? CountryCode { get; set; }
 
+    [JsonPropertyName("state_province")]
+    public string? StateProvince { get; set; }
+
     [JsonPropertyName("city")]
     public string? City { get; set; }
+
+    [JsonPropertyName("years_of_experience")]
+    public decimal? YearsOfExperience { get; set; }
 
     [JsonPropertyName("role")]
     public string Role { get; set; } = string.Empty;
@@ -73,6 +94,9 @@ public class UpdateProfileRequest
     [JsonPropertyName("display_name")]
     public string? DisplayName { get; set; }
 
+    [JsonPropertyName("username")]
+    public string? Username { get; set; }
+
     [JsonPropertyName("avatar_path")]
     public string? AvatarPath { get; set; }
 
@@ -94,13 +118,43 @@ public class UpdateProfileRequest
     [JsonPropertyName("bio")]
     public string? Bio { get; set; }
 
+    [JsonPropertyName("website_url")]
+    public string? WebsiteUrl { get; set; }
+
+    [JsonPropertyName("linkedin_url")]
+    public string? LinkedinUrl { get; set; }
+
+    [JsonPropertyName("github_url")]
+    public string? GithubUrl { get; set; }
+
+    [JsonPropertyName("portfolio_url")]
+    public string? PortfolioUrl { get; set; }
+
     [JsonPropertyName("country_code")]
     public string? CountryCode { get; set; }
+
+    [JsonPropertyName("state_province")]
+    public string? StateProvince { get; set; }
 
     [JsonPropertyName("city")]
     public string? City { get; set; }
 
+    [JsonPropertyName("years_of_experience")]
+    public decimal? YearsOfExperience { get; set; }
+
     [JsonPropertyName("is_profile_complete")]
     public bool? IsProfileComplete { get; set; }
+}
+
+public class UsernameCheckResultDto
+{
+    [JsonPropertyName("username")]
+    public string Username { get; set; } = string.Empty;
+
+    [JsonPropertyName("is_available")]
+    public bool IsAvailable { get; set; }
+
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = string.Empty;
 }
 

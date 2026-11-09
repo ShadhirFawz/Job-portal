@@ -121,10 +121,31 @@ const router = createRouter({
       component: () => import('@/views/auth/Callback.vue')
     },
     {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('@/views/profile/ViewProfile.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/profile/edit',
+      name: 'profile-edit',
+      component: () => import('@/views/profile/EditProfile.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/profile/complete',
       name: 'profile-complete',
       component: () => import('@/views/profile/CompleteProfile.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/u/:username',
+      name: 'public-profile',
+      component: () => import('@/views/profile/PublicProfile.vue')
+    },
+    {
+      path: '/profile/:username',
+      redirect: to => `/u/${to.params.username}`
     },
     {
       path: '/',
@@ -158,7 +179,7 @@ router.beforeEach(async (to, from, next) => {
     return next({ name: 'home' })
   }
 
-  // Force profile completion
+  // Force profile completion during onboarding/initial registration
   if (
     isAuthenticated &&
     !isProfileComplete &&
@@ -166,6 +187,15 @@ router.beforeEach(async (to, from, next) => {
     to.name !== 'auth-callback'
   ) {
     return next({ name: 'profile-complete' })
+  }
+
+  // Prevent accessing /profile/complete once profile has already been completed
+  if (
+    isAuthenticated &&
+    isProfileComplete &&
+    to.name === 'profile-complete'
+  ) {
+    return next({ name: 'profile' })
   }
 
   next()

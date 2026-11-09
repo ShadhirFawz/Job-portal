@@ -474,7 +474,7 @@ async function handleApply() {
                   <span>Applying As</span>
                 </h4>
                 <router-link
-                  to="/profile/complete"
+                  to="/profile/edit"
                   class="text-[10px] sm:text-[11px] font-medium text-primary hover:underline whitespace-nowrap"
                 >
                   Edit Profile

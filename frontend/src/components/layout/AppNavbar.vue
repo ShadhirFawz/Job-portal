@@ -348,12 +348,12 @@ function isActive(path: string): boolean {
 
                 <div class="py-1 text-xs">
                   <router-link
-                    to="/profile/complete"
+                    to="/profile"
                     @click="isUserMenuOpen = false"
                     class="flex items-center gap-2.5 px-4 py-2 text-text-muted hover:bg-surface-raised hover:text-primary transition"
                   >
                     <User class="h-4 w-4 text-text-subtle" />
-                    <span>Profile & Preferences</span>
+                    <span>My Profile</span>
                   </router-link>
 
                   <router-link
@@ -671,17 +671,17 @@ function isActive(path: string): boolean {
             </router-link>
 
             <router-link
-              to="/profile/complete"
+              to="/profile"
               @click="closeMenus"
               :class="[
                 'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition',
-                isActive('/profile/complete')
+                isActive('/profile')
                   ? 'bg-primary-light text-primary'
                   : 'text-text-muted hover:bg-surface-raised hover:text-text-strong',
               ]"
             >
               <User class="h-4 w-4 shrink-0" />
-              Profile & Settings
+              My Profile
             </router-link>
 
             <!-- Theme Mode (mobile) -->

@@ -23,6 +23,21 @@ public class ProfilesController : ControllerBase
         return Ok(profile);
     }
 
+    [HttpGet("username/{username}")]
+    public async Task<IActionResult> GetUserProfileByUsername(string username)
+    {
+        var profile = await _profileService.GetUserProfileByUsernameAsync(username);
+        if (profile == null) return NotFound(new { message = $"User @{username} not found." });
+        return Ok(profile);
+    }
+
+    [HttpGet("check-username")]
+    public async Task<IActionResult> CheckUsername([FromQuery] string username, [FromQuery] Guid? currentUserId)
+    {
+        var result = await _profileService.CheckUsernameAvailabilityAsync(username, currentUserId);
+        return Ok(result);
+    }
+
     [HttpPut("{userId:guid}")]
     public async Task<IActionResult> UpdateUserProfile(Guid userId, [FromBody] UpdateProfileRequest request)
     {

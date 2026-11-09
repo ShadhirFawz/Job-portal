@@ -66,11 +66,11 @@ const primaryOrg = computed(() => {
         <!-- Role-based Action Buttons -->
         <div class="mt-6 flex flex-wrap gap-3">
           <router-link
-            to="/profile/complete"
+            to="/profile"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-indigo-700 font-semibold text-xs sm:text-sm shadow-xs hover:bg-indigo-50 transition"
           >
             <User class="h-4 w-4" />
-            Profile Settings
+            My Profile
           </router-link>
 
           <router-link
