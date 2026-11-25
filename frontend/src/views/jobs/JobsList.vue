@@ -337,11 +337,11 @@ function getExperienceLabel(val: string): string {
             <button
               type="button"
               @click="
-                location = ''
-                locationInput = ''
-                page = 1
-                syncUrl()
-                fetchJobs()
+                location = '';
+                locationInput = '';
+                page = 1;
+                syncUrl();
+                fetchJobs();
               "
               class="hover:text-primary"
             >
@@ -357,10 +357,10 @@ function getExperienceLabel(val: string): string {
             <button
               type="button"
               @click="
-                jobType = ''
-                page = 1
-                syncUrl()
-                fetchJobs()
+                jobType = '';
+                page = 1;
+                syncUrl();
+                fetchJobs();
               "
               class="hover:text-primary"
             >
@@ -376,10 +376,10 @@ function getExperienceLabel(val: string): string {
             <button
               type="button"
               @click="
-                workMode = ''
-                page = 1
-                syncUrl()
-                fetchJobs()
+                workMode = '';
+                page = 1;
+                syncUrl();
+                fetchJobs();
               "
               class="hover:text-primary"
             >
@@ -395,10 +395,10 @@ function getExperienceLabel(val: string): string {
             <button
               type="button"
               @click="
-                experienceLevel = ''
-                page = 1
-                syncUrl()
-                fetchJobs()
+                experienceLevel = '';
+                page = 1;
+                syncUrl();
+                fetchJobs();
               "
               class="hover:text-primary"
             >

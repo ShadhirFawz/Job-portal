@@ -3,14 +3,22 @@ ADD COLUMN IF NOT EXISTS slug TEXT;
 
 CREATE OR REPLACE FUNCTION public.generate_application_slug()
 RETURNS TEXT
-LANGUAGE sql
-IMMUTABLE
+LANGUAGE plpgsql
+VOLATILE
 AS $$
-  SELECT 'application-' || substr(replace(gen_random_uuid()::text, '-', ''), 1, 12);
+DECLARE
+  new_slug TEXT;
+BEGIN
+  LOOP
+    new_slug := 'application-' || substr(replace(gen_random_uuid()::text, '-', ''), 1, 12);
+    EXIT WHEN NOT EXISTS (SELECT 1 FROM public.job_applications WHERE slug = new_slug);
+  END LOOP;
+  RETURN new_slug;
+END;
 $$;
 
 UPDATE public.job_applications
-SET slug = public.generate_application_slug()
+SET slug = 'application-' || substr(replace(gen_random_uuid()::text, '-', ''), 1, 8) || '-' || substr(replace(id::text, '-', ''), 1, 6)
 WHERE slug IS NULL OR slug = '';
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_job_applications_slug

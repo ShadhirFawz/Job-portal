@@ -14,7 +14,7 @@ import type {
   ApplicationStatus,
   ApplicationStatusFilter,
 } from '@/types/application'
-import type { QuizAttempt, QuizAnswerDetail } from '@/types/assessment'
+import type { QuizAttempt, QuizAnswerDetail, SubmitStructuredReviewPayload } from '@/types/assessment'
 import {
   ArrowLeft,
   Briefcase,
@@ -40,6 +40,10 @@ import {
   X,
   Eye,
   Lightbulb,
+  Lock,
+  Edit3,
+  Save,
+  AlertTriangle,
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
@@ -224,18 +228,100 @@ async function loadQuizAttempts() {
   }
 }
 
+// Manual Review Session state
+const isReviewLocked = ref(false)
+const reviewLockMessage = ref('')
+const reviewMarks = ref<Record<string, { points: number; feedback: string }>>({})
+const submittingReview = ref(false)
+
+const isReviewMode = computed(() => {
+  return selectedQuizAttempt.value?.status === 'submitted' || selectedQuizAttempt.value?.requires_manual_review === true
+})
+
+const structuredQuestions = computed(() => {
+  return selectedQuizAttempt.value?.answers?.filter((a) => a.question_type === 'structured') || []
+})
+
+const hasStructuredQuestions = computed(() => {
+  return structuredQuestions.value.length > 0
+})
+
+const autoGradedScore = computed(() => {
+  if (!selectedQuizAttempt.value?.answers) return 0
+  return selectedQuizAttempt.value.answers
+    .filter((a) => a.question_type !== 'structured')
+    .reduce((sum, a) => sum + (Number(a.points_awarded) || 0), 0)
+})
+
+const structuredManualScore = computed(() => {
+  let sum = 0
+  for (const q of structuredQuestions.value) {
+    const mark = reviewMarks.value[q.question_id]?.points ?? q.points_awarded ?? 0
+    sum += Number(mark) || 0
+  }
+  return sum
+})
+
+const projectedTotalScore = computed(() => {
+  return autoGradedScore.value + structuredManualScore.value
+})
+
+const projectedPercentage = computed(() => {
+  const max = Number(selectedQuizAttempt.value?.max_score) || 0
+  if (max <= 0) return 0
+  return Math.round((projectedTotalScore.value / max) * 1000) / 10
+})
+
+const projectedPassed = computed(() => {
+  const passScore = selectedQuizAttempt.value?.passing_score ?? 70
+  return projectedPercentage.value >= passScore
+})
+
 async function openQuizResults(app: JobApplication) {
   selectedApplicationForQuiz.value = app
   showQuizModal.value = true
   loadingQuizDetail.value = true
+  isReviewLocked.value = false
+  reviewLockMessage.value = ''
+  reviewMarks.value = {}
+
   try {
     const summary = getQuizAttempt(app)
+    let detailed: QuizAttempt | null = null
+
     if (summary?.id) {
-      const detailed = await assessmentService.getAttempt(summary.id, auth.user!.id)
-      selectedQuizAttempt.value = detailed || summary
+      detailed = await assessmentService.getAttempt(summary.id, auth.user!.id)
     } else {
-      const attemptByApp = await assessmentService.getApplicationAttempt(app.id, auth.user!.id)
-      selectedQuizAttempt.value = attemptByApp
+      detailed = await assessmentService.getApplicationAttempt(app.id, auth.user!.id)
+    }
+
+    selectedQuizAttempt.value = detailed || summary || null
+
+    // If attempt needs manual review or is submitted, initiate/check review session
+    if (selectedQuizAttempt.value && (selectedQuizAttempt.value.status === 'submitted' || selectedQuizAttempt.value.requires_manual_review)) {
+      try {
+        const reviewSession = await assessmentService.startQuizReview(selectedQuizAttempt.value.id, auth.user!.id)
+        if (!reviewSession.can_review) {
+          isReviewLocked.value = true
+          reviewLockMessage.value = reviewSession.message || 'This assessment is currently locked for review by another official.'
+        } else {
+          isReviewLocked.value = false
+        }
+      } catch (revErr: any) {
+        console.warn('Could not start review session:', revErr)
+      }
+
+      // Initialize review marks from existing answers
+      if (selectedQuizAttempt.value.answers) {
+        for (const ans of selectedQuizAttempt.value.answers) {
+          if (ans.question_type === 'structured') {
+            reviewMarks.value[ans.question_id] = {
+              points: Number(ans.points_awarded ?? 0),
+              feedback: ans.reviewer_feedback || ''
+            }
+          }
+        }
+      }
     }
   } catch (err: any) {
     console.error('Error fetching quiz details:', err)
@@ -245,10 +331,85 @@ async function openQuizResults(app: JobApplication) {
   }
 }
 
+function getReviewMark(questionId: string) {
+  if (!reviewMarks.value[questionId]) {
+    reviewMarks.value[questionId] = { points: 0, feedback: '' }
+  }
+  return reviewMarks.value[questionId]!
+}
+
+function clampReviewPoints(questionId: string, maxPoints: number) {
+  const mark = getReviewMark(questionId)
+  if (mark.points > maxPoints) mark.points = maxPoints
+  if (mark.points < 0) mark.points = 0
+}
+
+async function handleFinalizeReview() {
+  if (!selectedQuizAttempt.value || !auth.user) return
+  if (isReviewLocked.value) {
+    toast.error(reviewLockMessage.value || 'Review session is locked by another official.')
+    return
+  }
+
+  // Validate all marks are within bounds: 0 <= points <= max_points
+  for (const q of structuredQuestions.value) {
+    const mark = reviewMarks.value[q.question_id]?.points
+    if (mark === undefined || mark === null || isNaN(mark)) {
+      toast.error(`Please enter points for all structured questions.`)
+      return
+    }
+    if (mark < 0 || mark > q.max_points) {
+      toast.error(`Points for question must be between 0 and ${q.max_points}.`)
+      return
+    }
+  }
+
+  submittingReview.value = true
+  try {
+    const payload: SubmitStructuredReviewPayload = {
+      attempt_id: selectedQuizAttempt.value.id,
+      reviews: structuredQuestions.value.map((q) => ({
+        question_id: q.question_id,
+        points_awarded: Number(reviewMarks.value[q.question_id]?.points ?? 0),
+        reviewer_feedback: reviewMarks.value[q.question_id]?.feedback?.trim() || undefined
+      }))
+    }
+
+    const updated = await assessmentService.submitStructuredReview(auth.user.id, payload)
+    toast.success('Assessment reviewed and finalized successfully!')
+    selectedQuizAttempt.value = updated
+
+    // Update in quizAttempts array so candidate card immediately reflects status
+    const idx = quizAttempts.value.findIndex((a) => a.id === updated.id)
+    if (idx !== -1 && quizAttempts.value[idx]) {
+      quizAttempts.value[idx] = updated
+    } else {
+      quizAttempts.value.unshift(updated)
+    }
+
+    // Update score on the application directly
+    if (selectedApplicationForQuiz.value) {
+      selectedApplicationForQuiz.value.score = updated.percentage
+      const appIdx = applications.value.findIndex((a) => a.id === selectedApplicationForQuiz.value?.id)
+      if (appIdx !== -1 && applications.value[appIdx]) {
+        applications.value[appIdx]!.score = updated.percentage
+      }
+    }
+  } catch (err: any) {
+    console.error('Error submitting review:', err)
+    toast.error(err.message || 'Failed to submit review.')
+  } finally {
+    submittingReview.value = false
+  }
+}
+
 function closeQuizModal() {
   showQuizModal.value = false
   selectedQuizAttempt.value = null
   selectedApplicationForQuiz.value = null
+  isReviewLocked.value = false
+  reviewLockMessage.value = ''
+  reviewMarks.value = {}
 }
 
 function formatQuestionType(type?: string): string {
@@ -732,7 +893,7 @@ async function handleDownloadResume(app: JobApplication) {
                   'bg-success-bg/25 border-success-border/60': getQuizAttempt(app)?.passed === true,
                   'bg-danger-bg/25 border-danger-border/60': getQuizAttempt(app)?.passed === false,
                   'bg-warning-bg/25 border-warning-border/60':
-                    getQuizAttempt(app)?.status === 'submitted',
+                    getQuizAttempt(app)?.status === 'submitted' || getQuizAttempt(app)?.requires_manual_review,
                   'bg-surface-raised/60 border-border':
                     getQuizAttempt(app)?.status === 'in_progress' ||
                     getQuizAttempt(app)?.passed === null,
@@ -744,7 +905,8 @@ async function handleDownloadResume(app: JobApplication) {
                     :class="{
                       'bg-success-bg text-success': getQuizAttempt(app)?.passed === true,
                       'bg-danger-bg text-danger': getQuizAttempt(app)?.passed === false,
-                      'bg-warning-bg text-warning': getQuizAttempt(app)?.status === 'submitted',
+                      'bg-warning-bg text-warning':
+                        getQuizAttempt(app)?.status === 'submitted' || getQuizAttempt(app)?.requires_manual_review,
                       'bg-primary-light text-primary':
                         getQuizAttempt(app)?.status === 'in_progress' ||
                         getQuizAttempt(app)?.passed === null,
@@ -773,11 +935,11 @@ async function handleDownloadResume(app: JobApplication) {
                         <span>{{ getQuizAttempt(app)?.passed ? 'Passed' : 'Failed' }}</span>
                       </span>
                       <span
-                        v-else-if="getQuizAttempt(app)?.status === 'submitted'"
+                        v-else-if="getQuizAttempt(app)?.status === 'submitted' || getQuizAttempt(app)?.requires_manual_review"
                         class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider alert-warning"
                       >
                         <Clock class="h-3 w-3" />
-                        <span>Under Review</span>
+                        <span>Pending Review</span>
                       </span>
                       <span
                         v-else-if="getQuizAttempt(app)?.status === 'in_progress'"
@@ -811,6 +973,10 @@ async function handleDownloadResume(app: JobApplication) {
                       <span v-if="getQuizAttempt(app)?.passing_score">
                         Pass Mark: {{ getQuizAttempt(app)?.passing_score }}%
                       </span>
+                      <span v-if="getQuizAttempt(app)?.reviewer_name">•</span>
+                      <span v-if="getQuizAttempt(app)?.reviewer_name" class="text-text-secondary">
+                        Reviewer: {{ getQuizAttempt(app)?.reviewer_name }}
+                      </span>
                       <span v-if="getQuizAttempt(app)?.submitted_at">•</span>
                       <span v-if="getQuizAttempt(app)?.submitted_at">
                         Submitted {{ formatAttemptDate(getQuizAttempt(app)?.submitted_at) }}
@@ -825,15 +991,18 @@ async function handleDownloadResume(app: JobApplication) {
                   @click="openQuizResults(app)"
                   class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition shrink-0 shadow-xs cursor-pointer"
                   :class="
-                    getQuizAttempt(app)?.passed
-                      ? 'bg-success-bg text-success hover:bg-success hover:text-white border border-success-border'
-                      : getQuizAttempt(app)?.passed === false
-                        ? 'bg-danger-bg text-danger hover:bg-danger hover:text-white border border-danger-border'
-                        : 'bg-primary-light text-primary hover:bg-primary hover:text-white border border-primary/30'
+                    getQuizAttempt(app)?.status === 'submitted' || getQuizAttempt(app)?.requires_manual_review
+                      ? 'bg-warning-bg text-warning hover:bg-warning hover:text-white border border-warning-border'
+                      : getQuizAttempt(app)?.passed
+                        ? 'bg-success-bg text-success hover:bg-success hover:text-white border border-success-border'
+                        : getQuizAttempt(app)?.passed === false
+                          ? 'bg-danger-bg text-danger hover:bg-danger hover:text-white border border-danger-border'
+                          : 'bg-primary-light text-primary hover:bg-primary hover:text-white border border-primary/30'
                   "
                 >
-                  <Eye class="h-3.5 w-3.5" />
-                  <span>View Quiz Results</span>
+                  <Edit3 v-if="getQuizAttempt(app)?.status === 'submitted' || getQuizAttempt(app)?.requires_manual_review" class="h-3.5 w-3.5" />
+                  <Eye v-else class="h-3.5 w-3.5" />
+                  <span>{{ (getQuizAttempt(app)?.status === 'submitted' || getQuizAttempt(app)?.requires_manual_review) ? 'Review Assessment' : 'View Quiz Results' }}</span>
                 </button>
               </div>
 
@@ -1008,7 +1177,7 @@ async function handleDownloadResume(app: JobApplication) {
                   class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider bg-primary-light text-primary border border-primary/20"
                 >
                   <Award class="h-3 w-3" />
-                  <span>{{ selectedQuizAttempt?.stage_title || 'Quiz Assessment Results' }}</span>
+                  <span>{{ selectedQuizAttempt?.stage_title || 'Quiz Assessment' }}</span>
                 </span>
                 <span
                   v-if="selectedQuizAttempt?.status === 'graded'"
@@ -1020,6 +1189,13 @@ async function handleDownloadResume(app: JobApplication) {
                   <CheckCircle2 v-if="selectedQuizAttempt?.passed" class="h-3 w-3" />
                   <XCircle v-else class="h-3 w-3" />
                   <span>{{ selectedQuizAttempt?.passed ? 'Passed' : 'Failed' }}</span>
+                </span>
+                <span
+                  v-else-if="isReviewMode"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider alert-warning"
+                >
+                  <Clock class="h-3 w-3" />
+                  <span>Pending Manual Review</span>
                 </span>
               </div>
 
@@ -1060,14 +1236,67 @@ async function handleDownloadResume(app: JobApplication) {
 
             <!-- Quiz Attempt Content -->
             <div v-else-if="selectedQuizAttempt" class="space-y-6">
+              <!-- Review Locked Warning Banner -->
+              <div
+                v-if="isReviewLocked"
+                class="rounded-xl p-4 bg-warning-bg/40 border border-warning-border flex items-start gap-3 shadow-xs"
+              >
+                <Lock class="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                <div class="space-y-1">
+                  <h4 class="text-xs sm:text-sm font-bold text-text-strong">
+                    Review Session Locked
+                  </h4>
+                  <p class="text-xs text-text-secondary leading-relaxed">
+                    {{ reviewLockMessage || 'This assessment review was claimed by another official. Only the reviewer who initiated the session can complete and finalize marks.' }}
+                  </p>
+                  <div v-if="selectedQuizAttempt.review_started_at" class="text-[11px] text-text-muted">
+                    Session started: {{ formatAttemptDate(selectedQuizAttempt.review_started_at) }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Manual Review Active Banner -->
+              <div
+                v-else-if="isReviewMode"
+                class="rounded-xl p-4 bg-primary-light/40 border border-primary/30 flex items-start gap-3 shadow-xs"
+              >
+                <Edit3 class="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <div class="space-y-1">
+                  <h4 class="text-xs sm:text-sm font-bold text-text-strong flex items-center gap-1.5">
+                    <span>Manual Review Session Active</span>
+                    <span class="text-[10px] font-semibold px-2 py-0.2 rounded bg-primary text-white uppercase tracking-wider">Locked to you</span>
+                  </h4>
+                  <p class="text-xs text-text-secondary leading-relaxed">
+                    Single-choice, multiple-choice, and true/false questions were auto-corrected upon submission. For structured questions below, evaluate the candidate's response and enter marks (0 to question max points) with optional feedback. Once finalized, the score and pass/fail status are calculated automatically.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Past Review Attribution Banner -->
+              <div
+                v-else-if="selectedQuizAttempt.reviewed_at"
+                class="rounded-xl p-3 bg-surface-raised border border-border flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted shadow-xs"
+              >
+                <div class="flex items-center gap-2">
+                  <CheckCircle2 class="h-4 w-4 text-success" />
+                  <span>
+                    Reviewed and finalized by
+                    <strong class="text-text-strong">{{ selectedQuizAttempt.reviewer_name || 'Organization Reviewer' }}</strong>
+                  </span>
+                </div>
+                <div class="text-[11px]">
+                  {{ formatAttemptDate(selectedQuizAttempt.reviewed_at) }}
+                </div>
+              </div>
+
               <!-- Scorecard Banner -->
               <div
                 class="rounded-2xl p-4 sm:p-5 border flex flex-col sm:flex-row items-center justify-between gap-4"
                 :class="{
-                  'bg-success-bg/30 border-success-border': selectedQuizAttempt.passed === true,
-                  'bg-danger-bg/30 border-danger-border': selectedQuizAttempt.passed === false,
+                  'bg-success-bg/30 border-success-border': selectedQuizAttempt.passed === true || (isReviewMode && !isReviewLocked && projectedPassed),
+                  'bg-danger-bg/30 border-danger-border': selectedQuizAttempt.passed === false || (isReviewMode && !isReviewLocked && !projectedPassed),
                   'bg-surface-raised border-border':
-                    selectedQuizAttempt.passed === null || selectedQuizAttempt.passed === undefined,
+                    (selectedQuizAttempt.passed === null || selectedQuizAttempt.passed === undefined) && !isReviewMode,
                 }"
               >
                 <!-- Left: Big percentage & Status -->
@@ -1075,29 +1304,43 @@ async function handleDownloadResume(app: JobApplication) {
                   <div
                     class="h-16 w-16 rounded-2xl flex flex-col items-center justify-center font-bold text-2xl shadow-sm border"
                     :class="{
-                      'bg-success text-white border-success': selectedQuizAttempt.passed === true,
-                      'bg-danger text-white border-danger': selectedQuizAttempt.passed === false,
+                      'bg-success text-white border-success': selectedQuizAttempt.passed === true || (isReviewMode && !isReviewLocked && projectedPassed),
+                      'bg-danger text-white border-danger': selectedQuizAttempt.passed === false || (isReviewMode && !isReviewLocked && !projectedPassed),
                       'bg-primary text-white border-primary':
-                        selectedQuizAttempt.passed === null ||
-                        selectedQuizAttempt.passed === undefined,
+                        (selectedQuizAttempt.passed === null || selectedQuizAttempt.passed === undefined) && !isReviewMode,
                     }"
                   >
-                    <span>{{ selectedQuizAttempt.percentage }}%</span>
+                    <span v-if="isReviewMode && !isReviewLocked">{{ projectedPercentage }}%</span>
+                    <span v-else>{{ selectedQuizAttempt.percentage }}%</span>
                   </div>
 
                   <div>
                     <h3 class="text-base font-bold text-text-strong">
-                      {{
-                        selectedQuizAttempt.passed
-                          ? 'Assessment Passed'
-                          : selectedQuizAttempt.passed === false
-                            ? 'Assessment Failed'
-                            : 'Assessment Completed'
-                      }}
+                      <template v-if="isReviewMode && !isReviewLocked">
+                        <span :class="projectedPassed ? 'text-success' : 'text-danger'">
+                          {{ projectedPassed ? 'Projected: Pass' : 'Projected: Needs More Points to Pass' }}
+                        </span>
+                      </template>
+                      <template v-else>
+                        {{
+                          selectedQuizAttempt.passed
+                            ? 'Assessment Passed'
+                            : selectedQuizAttempt.passed === false
+                              ? 'Assessment Failed'
+                              : 'Assessment Under Review'
+                        }}
+                      </template>
                     </h3>
                     <p class="text-xs text-text-secondary mt-0.5">
-                      Earned {{ selectedQuizAttempt.score }} of
-                      {{ selectedQuizAttempt.max_score }} total points
+                      <template v-if="isReviewMode && !isReviewLocked">
+                        Projected Score: <strong>{{ projectedTotalScore }}</strong> of {{ selectedQuizAttempt.max_score }} total points
+                        <span class="text-text-muted">
+                          (Auto: {{ autoGradedScore }} pts + Structured: {{ structuredManualScore }} pts)
+                        </span>
+                      </template>
+                      <template v-else>
+                        Earned {{ selectedQuizAttempt.score }} of {{ selectedQuizAttempt.max_score }} total points
+                      </template>
                     </p>
                     <p
                       v-if="selectedQuizAttempt.passing_score"
@@ -1132,7 +1375,9 @@ async function handleDownloadResume(app: JobApplication) {
                       >({{ selectedQuizAttempt.answers.length }})</span
                     >
                   </h4>
-                  <span class="text-xs text-text-subtle">Graded Assessment</span>
+                  <span class="text-xs text-text-subtle">
+                    {{ isReviewMode ? 'Manual Grading' : 'Graded Assessment' }}
+                  </span>
                 </div>
 
                 <!-- Empty Answers State -->
@@ -1163,6 +1408,7 @@ async function handleDownloadResume(app: JobApplication) {
 
                       <!-- Points Badge -->
                       <span
+                        v-if="ans.question_type !== 'structured' || !isReviewMode || isReviewLocked"
                         class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold"
                         :class="{
                           'bg-success-bg text-success border border-success-border':
@@ -1177,6 +1423,13 @@ async function handleDownloadResume(app: JobApplication) {
                         <XCircle v-else-if="ans.is_correct === false" class="h-3 w-3" />
                         <HelpCircle v-else class="h-3 w-3" />
                         <span>{{ ans.points_awarded }} / {{ ans.max_points }} pts</span>
+                      </span>
+                      <span
+                        v-else
+                        class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-light text-primary border border-primary/30"
+                      >
+                        <Edit3 class="h-3 w-3" />
+                        <span>{{ reviewMarks[ans.question_id]?.points ?? 0 }} / {{ ans.max_points }} pts</span>
                       </span>
                     </div>
 
@@ -1255,14 +1508,64 @@ async function handleDownloadResume(app: JobApplication) {
                     </div>
 
                     <!-- Structured / Written Open-Ended Response -->
-                    <div v-else-if="ans.question_type === 'structured'" class="pt-1 space-y-2">
-                      <div class="text-[11px] font-bold uppercase tracking-wider text-text-muted">
-                        Candidate's Response:
+                    <div v-else-if="ans.question_type === 'structured'" class="pt-1 space-y-3">
+                      <div>
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">
+                          Candidate's Written Response:
+                        </div>
+                        <div
+                          class="p-3.5 bg-surface-raised rounded-xl border border-border text-xs sm:text-sm text-text-strong whitespace-pre-line leading-relaxed font-sans select-text"
+                        >
+                          {{ ans.answer || '(No answer written)' }}
+                        </div>
                       </div>
+
+                      <!-- Reviewer Grading Controls (Active in Review Mode) -->
                       <div
-                        class="p-3 bg-surface-raised rounded-lg border border-border text-xs text-text-strong whitespace-pre-line leading-relaxed"
+                        v-if="isReviewMode && !isReviewLocked"
+                        class="p-4 rounded-xl border border-primary/25 bg-card space-y-3.5 shadow-xs"
                       >
-                        {{ ans.answer || '(No answer written)' }}
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <label class="text-xs font-bold text-text-strong flex items-center gap-1.5">
+                            <Award class="h-4 w-4 text-primary" />
+                            <span>Allocate Marks (Max: {{ ans.max_points }} pts):</span>
+                          </label>
+                          <div class="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              :max="ans.max_points"
+                              step="0.5"
+                              :value="getReviewMark(ans.question_id).points"
+                              @input="getReviewMark(ans.question_id).points = Number(($event.target as HTMLInputElement).value); clampReviewPoints(ans.question_id, ans.max_points)"
+                              class="w-24 px-3 py-1.5 text-xs sm:text-sm font-bold text-center rounded-lg border border-border bg-surface text-text-strong focus:border-primary focus:ring-2 focus:ring-primary/25 shadow-xs transition"
+                            />
+                            <span class="text-xs font-semibold text-text-muted">/ {{ ans.max_points }} pts</span>
+                          </div>
+                        </div>
+
+                        <!-- Reviewer Feedback input -->
+                        <div>
+                          <label class="block text-[11px] font-semibold text-text-muted mb-1">
+                            Reviewer Feedback / Comments (Optional):
+                          </label>
+                          <textarea
+                            :value="getReviewMark(ans.question_id).feedback"
+                            @input="getReviewMark(ans.question_id).feedback = ($event.target as HTMLTextAreaElement).value"
+                            rows="2"
+                            placeholder="Add evaluation remarks or feedback notes for this response..."
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-border bg-surface text-text-strong placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary/25 shadow-xs resize-none transition"
+                          ></textarea>
+                        </div>
+                      </div>
+
+                      <!-- Display Reviewer Feedback if already graded or locked -->
+                      <div
+                        v-else-if="ans.reviewer_feedback"
+                        class="p-3 bg-surface-raised/80 rounded-xl border border-border text-xs text-text-secondary space-y-1"
+                      >
+                        <span class="font-bold text-text-strong block">Reviewer Feedback:</span>
+                        <p class="whitespace-pre-line leading-relaxed">{{ ans.reviewer_feedback }}</p>
                       </div>
                     </div>
 
@@ -1291,7 +1594,7 @@ async function handleDownloadResume(app: JobApplication) {
             </div>
           </div>
 
-          <!-- Modal Footer with Quick Pipeline Actions -->
+          <!-- Modal Footer with Quick Pipeline Actions & Review Submit -->
           <div
             class="px-5 sm:px-6 py-3.5 border-t border-border bg-surface flex flex-col sm:flex-row items-center justify-between gap-3"
           >
@@ -1328,14 +1631,30 @@ async function handleDownloadResume(app: JobApplication) {
             </div>
             <div v-else></div>
 
-            <!-- Close Button -->
-            <button
-              type="button"
-              @click="closeQuizModal"
-              class="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg border border-border bg-card text-text-strong hover:bg-surface-raised transition shadow-xs cursor-pointer"
-            >
-              Close Results
-            </button>
+            <!-- Right Actions: Review Submit + Close -->
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <!-- Submit Review & Finalize Marks Button -->
+              <button
+                v-if="isReviewMode && !isReviewLocked"
+                type="button"
+                :disabled="submittingReview"
+                @click="handleFinalizeReview"
+                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold rounded-lg text-white bg-primary hover:bg-primary/90 transition shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                <Loader2 v-if="submittingReview" class="h-3.5 w-3.5 animate-spin" />
+                <Save v-else class="h-3.5 w-3.5" />
+                <span>Submit Review & Finalize Marks</span>
+              </button>
+
+              <!-- Close Button -->
+              <button
+                type="button"
+                @click="closeQuizModal"
+                class="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-lg border border-border bg-card text-text-strong hover:bg-surface-raised transition shadow-xs cursor-pointer"
+              >
+                {{ isReviewMode && !isReviewLocked ? 'Cancel' : 'Close Results' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>

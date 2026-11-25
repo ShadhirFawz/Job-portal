@@ -114,6 +114,9 @@ export interface QuizAnswerDetail {
   is_correct?: boolean | null
   points_awarded: number
   max_points: number
+  reviewer_feedback?: string | null
+  reviewed_by?: string | null
+  reviewed_at?: string | null
   explanation?: string | null
 }
 
@@ -134,6 +137,12 @@ export interface QuizAttempt {
   percentage: number
   passing_score?: number | null
   passed?: boolean | null
+  requires_manual_review?: boolean
+  reviewed_by?: string | null
+  review_started_at?: string | null
+  reviewed_at?: string | null
+  reviewer_name?: string | null
+  reviewer_email?: string | null
   stage_title?: string | null
   job_title?: string | null
   candidate_name?: string | null
@@ -156,5 +165,27 @@ export interface SubmitAnswerItem {
 export interface SubmitAssessmentPayload {
   attempt_id: string
   answers: SubmitAnswerItem[]
+}
+
+export interface ReviewStructuredAnswerItem {
+  question_id: string
+  points_awarded: number
+  reviewer_feedback?: string
+}
+
+export interface SubmitStructuredReviewPayload {
+  attempt_id: string
+  reviews: ReviewStructuredAnswerItem[]
+}
+
+export interface StartQuizReviewResponse {
+  success: boolean
+  can_review: boolean
+  is_locked: boolean
+  locked_by_id?: string | null
+  locked_by_name?: string | null
+  locked_by_email?: string | null
+  review_started_at?: string | null
+  message: string
 }
 

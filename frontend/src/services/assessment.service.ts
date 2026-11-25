@@ -3,7 +3,9 @@ import { supabase } from '@/lib/supabase'
 import type {
   QuizAttempt,
   StartAssessmentPayload,
-  SubmitAssessmentPayload
+  SubmitAssessmentPayload,
+  StartQuizReviewResponse,
+  SubmitStructuredReviewPayload
 } from '@/types/assessment'
 
 export const assessmentService = {
@@ -198,6 +200,51 @@ export const assessmentService = {
       console.error('Error fetching application assessment attempt:', error)
       return null
     }
+  },
+
+  async startQuizReview(attemptId: string, reviewerId: string): Promise<StartQuizReviewResponse> {
+    // 1. Try Supabase RPC directly
+    try {
+      const { data, error } = await supabase.rpc('start_quiz_review', {
+        p_attempt_id: attemptId,
+        p_reviewer_id: reviewerId
+      })
+      if (!error && data) {
+        return data as StartQuizReviewResponse
+      }
+    } catch (rpcErr) {
+      console.warn('Supabase rpc start_quiz_review failed:', rpcErr)
+    }
+
+    // 2. Fallback to backend API
+    return await api.post<StartQuizReviewResponse>(
+      `assessments/${attemptId}/start-review`,
+      {},
+      { reviewerId }
+    )
+  },
+
+  async submitStructuredReview(
+    reviewerId: string,
+    payload: SubmitStructuredReviewPayload
+  ): Promise<QuizAttempt> {
+    // 1. Try Supabase RPC directly
+    try {
+      const { data, error } = await supabase.rpc('submit_structured_review', {
+        p_attempt_id: payload.attempt_id,
+        p_reviewer_id: reviewerId,
+        p_reviews: payload.reviews
+      })
+      if (!error && data) {
+        const refreshed = await this.getAttempt(payload.attempt_id, reviewerId)
+        if (refreshed) return refreshed
+      }
+    } catch (rpcErr) {
+      console.warn('Supabase rpc submit_structured_review failed:', rpcErr)
+    }
+
+    // 2. Fallback to backend API
+    return await api.post<QuizAttempt>('assessments/submit-review', payload, { reviewerId })
   }
 }
 

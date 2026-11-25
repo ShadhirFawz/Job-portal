@@ -1371,8 +1371,8 @@ async function submitQuiz(auto = false, autoReason = '') {
           <button
             type="button"
             @click="
-              showInfractionModal = false
-              requestFullscreenMode()
+              showInfractionModal = false;
+              requestFullscreenMode();
             "
             class="w-full py-2.5 text-xs sm:text-sm font-bold rounded-xl bg-primary text-white hover:bg-primary-hover transition shadow-sm"
           >
@@ -1410,8 +1410,8 @@ async function submitQuiz(auto = false, autoReason = '') {
           <button
             type="button"
             @click="
-              showFullscreenModal = false
-              requestFullscreenMode()
+              showFullscreenModal = false;
+              requestFullscreenMode();
             "
             class="w-full py-2.5 text-xs sm:text-sm font-bold rounded-xl bg-primary text-white hover:bg-primary-hover transition shadow-sm"
           >
