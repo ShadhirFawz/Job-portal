@@ -120,6 +120,9 @@ public class SelectionProcessDto
 
     [JsonPropertyName("updated_at")]
     public DateTime UpdatedAt { get; set; }
+
+    [JsonPropertyName("slug")]
+    public string? Slug { get; set; }
 }
 
 public class JobDto

@@ -9,10 +9,10 @@ export const organizationService = {
   /**
    * Fetch an organization by ID via .NET backend API.
    */
-  async getOrganization(id: string): Promise<Organization | null> {
-    if (!id) return null
+  async getOrganization(slug: string): Promise<Organization | null> {
+    if (!slug) return null
     try {
-      return await api.get<Organization>(`organizations/${id}`)
+      return await api.get<Organization>(`organizations/${slug}`)
     } catch (error) {
       console.error('Error fetching organization via API:', error)
       return null

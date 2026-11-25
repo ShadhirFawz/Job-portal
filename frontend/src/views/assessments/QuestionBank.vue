@@ -9,7 +9,7 @@ import type {
   Question,
   QuestionType,
   DifficultyLevel,
-  QuestionOption
+  QuestionOption,
 } from '@/types/assessment'
 import {
   ArrowLeft,
@@ -25,7 +25,7 @@ import {
   Check,
   ChevronRight,
   User2,
-  GripHorizontal
+  GripHorizontal,
 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import { useConfirm } from '@/composables/useConfirm'
@@ -35,7 +35,7 @@ const router = useRouter()
 const auth = useAuthStore()
 const { confirm: showConfirm } = useConfirm()
 
-const organizationId = route.params.orgId as string
+const organizationId = route.params.slug as string
 
 // Query flags
 const isCreateQuery = computed(() => route.query.create === 'true')
@@ -61,7 +61,7 @@ const qBody = ref('')
 const qType = ref<QuestionType>('single_choice')
 const qOptions = ref<QuestionOption[]>([
   { id: 'a', text: '', is_correct: false },
-  { id: 'b', text: '', is_correct: false }
+  { id: 'b', text: '', is_correct: false },
 ])
 const qCorrectAnswer = ref('')
 const qExplanation = ref('')
@@ -105,8 +105,8 @@ async function fetchBanks() {
     banks.value = await questionBankService.getOrganizationBanks(organizationId)
     if (selectedBank.value) {
       // Refresh selected bank details
-      const refreshed = banks.value.find(b => b.id === selectedBank.value!.id)
-      selectedBank.value = refreshed ?? (banks.value[0] ?? null)
+      const refreshed = banks.value.find((b) => b.id === selectedBank.value!.id)
+      selectedBank.value = refreshed ?? banks.value[0] ?? null
     } else if (banks.value.length > 0) {
       selectedBank.value = banks.value[0] ?? null
     }
@@ -153,7 +153,7 @@ async function saveBank() {
       const updated = await questionBankService.updateBank(editingBankId.value, auth.user.id, {
         name: bankName.value.trim(),
         description: bankDescription.value.trim() || undefined,
-        category: bankCategory.value.trim() || undefined
+        category: bankCategory.value.trim() || undefined,
       })
       toast.success('Question bank updated successfully')
       showBankModal.value = false
@@ -163,7 +163,7 @@ async function saveBank() {
       const created = await questionBankService.createBank(organizationId, auth.user.id, {
         name: bankName.value.trim(),
         description: bankDescription.value.trim() || undefined,
-        category: bankCategory.value.trim() || undefined
+        category: bankCategory.value.trim() || undefined,
       })
       toast.success('Question bank created successfully')
       showBankModal.value = false
@@ -219,7 +219,7 @@ function openAddQuestion() {
   qType.value = 'single_choice'
   qOptions.value = [
     { id: 'a', text: '', is_correct: false },
-    { id: 'b', text: '', is_correct: false }
+    { id: 'b', text: '', is_correct: false },
   ]
   qCorrectAnswer.value = ''
   qExplanation.value = ''
@@ -237,12 +237,13 @@ function openEditQuestion(q: Question) {
   editingQuestionId.value = q.id
   qBody.value = q.body
   qType.value = q.question_type
-  qOptions.value = q.options && q.options.length > 0
-    ? JSON.parse(JSON.stringify(q.options))
-    : [
-        { id: 'a', text: '', is_correct: false },
-        { id: 'b', text: '', is_correct: false }
-      ]
+  qOptions.value =
+    q.options && q.options.length > 0
+      ? JSON.parse(JSON.stringify(q.options))
+      : [
+          { id: 'a', text: '', is_correct: false },
+          { id: 'b', text: '', is_correct: false },
+        ]
   qCorrectAnswer.value = q.correct_answer || ''
   qExplanation.value = q.explanation || ''
   qDifficulty.value = q.difficulty || 'medium'
@@ -279,17 +280,17 @@ async function saveQuestion() {
 
   // Validation per type
   if (qType.value === 'single_choice' || qType.value === 'multiple_choice') {
-    const filled = qOptions.value.filter(o => o.text.trim())
+    const filled = qOptions.value.filter((o) => o.text.trim())
     if (filled.length < 2) {
       questionError.value = 'At least two options are required'
       return
     }
-    if (!qOptions.value.some(o => o.is_correct)) {
+    if (!qOptions.value.some((o) => o.is_correct)) {
       questionError.value = 'Please select at least one correct answer'
       return
     }
   } else if (qType.value === 'true_false') {
-    if (!qOptions.value.some(o => o.is_correct)) {
+    if (!qOptions.value.some((o) => o.is_correct)) {
       questionError.value = 'Please select whether True or False is the correct answer'
       return
     }
@@ -300,14 +301,15 @@ async function saveQuestion() {
   savingQuestion.value = true
   questionError.value = ''
 
-  const finalOptions = qType.value === 'structured'
-    ? []
-    : qType.value === 'true_false'
-      ? [
-          { id: 'true', text: 'True', is_correct: qOptions.value[0]?.is_correct || false },
-          { id: 'false', text: 'False', is_correct: qOptions.value[1]?.is_correct || false }
-        ]
-      : qOptions.value.filter(o => o.text.trim())
+  const finalOptions =
+    qType.value === 'structured'
+      ? []
+      : qType.value === 'true_false'
+        ? [
+            { id: 'true', text: 'True', is_correct: qOptions.value[0]?.is_correct || false },
+            { id: 'false', text: 'False', is_correct: qOptions.value[1]?.is_correct || false },
+          ]
+        : qOptions.value.filter((o) => o.text.trim())
 
   try {
     if (editingQuestionId.value) {
@@ -318,7 +320,7 @@ async function saveQuestion() {
         correct_answer: qCorrectAnswer.value.trim() || undefined,
         explanation: qExplanation.value.trim() || undefined,
         difficulty: qDifficulty.value,
-        points: qPoints.value
+        points: qPoints.value,
       })
       toast.success('Question updated')
     } else {
@@ -330,7 +332,7 @@ async function saveQuestion() {
         explanation: qExplanation.value.trim() || undefined,
         difficulty: qDifficulty.value,
         points: qPoints.value,
-        order_index: selectedBank.value.questions?.length || 0
+        order_index: selectedBank.value.questions?.length || 0,
       })
       toast.success('Question added to bank')
     }
@@ -371,7 +373,7 @@ function formatType(t: string): string {
     single_choice: 'Single Choice',
     multiple_choice: 'Multiple Choice',
     true_false: 'True / False',
-    structured: 'Structured'
+    structured: 'Structured',
   }
   return map[t] || t.replace('_', ' ')
 }
@@ -438,8 +440,8 @@ async function onDrop(target: Question) {
     return
   }
 
-  const fromIdx = questions.findIndex(q => q.id === draggingId.value)
-  const toIdx = questions.findIndex(q => q.id === target.id)
+  const fromIdx = questions.findIndex((q) => q.id === draggingId.value)
+  const toIdx = questions.findIndex((q) => q.id === target.id)
 
   resetDragState()
 
@@ -467,9 +469,9 @@ async function persistQuestionOrder(questions: Question[]) {
           explanation: q.explanation || undefined,
           difficulty: q.difficulty || 'medium',
           points: q.points || 1,
-          order_index: idx
-        })
-      )
+          order_index: idx,
+        }),
+      ),
     )
     toast.success('Question order updated')
   } catch (err: any) {
@@ -482,13 +484,18 @@ async function persistQuestionOrder(questions: Question[]) {
 <template>
   <div class="min-h-screen bg-page py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-7xl mx-auto space-y-6">
-      
       <!-- Top Navigation Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5">
+      <div
+        class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5"
+      >
         <div>
           <button
             type="button"
-            @click="returnToJob ? router.push(`/organizations/${organizationId}/jobs/create`) : router.push(`/organizations/${organizationId}?tab=jobs`)"
+            @click="
+              returnToJob
+                ? router.push(`/organizations/${organizationId}/jobs/create`)
+                : router.push(`/organizations/${organizationId}?tab=jobs`)
+            "
             class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-text-muted hover:text-text-strong transition mb-2"
           >
             <ArrowLeft class="h-4 w-4" />
@@ -498,12 +505,15 @@ async function persistQuestionOrder(questions: Question[]) {
             <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-text-strong">
               Question Banks
             </h1>
-            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-light text-primary border border-primary/20">
+            <span
+              class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-light text-primary border border-primary/20"
+            >
               {{ banks.length }} {{ banks.length === 1 ? 'Bank' : 'Banks' }}
             </span>
           </div>
           <p class="text-xs sm:text-sm text-text-muted mt-1">
-            Organize questions into reusable banks. Questions can be single choice, multiple choice, true/false, or structured.
+            Organize questions into reusable banks. Questions can be single choice, multiple choice,
+            true/false, or structured.
           </p>
         </div>
 
@@ -530,13 +540,19 @@ async function persistQuestionOrder(questions: Question[]) {
             Configuring Bank for Job: "{{ selectedBank.name }}"
           </h2>
           <p class="text-xs text-text-secondary leading-relaxed">
-            Add questions below. When you are ready, click "Attach & Return to Job" to select this bank on your job posting.
+            Add questions below. When you are ready, click "Attach & Return to Job" to select this
+            bank on your job posting.
           </p>
         </div>
 
         <button
           type="button"
-          @click="router.push({ path: `/organizations/${organizationId}/jobs/create`, query: { newBankId: selectedBank.id } })"
+          @click="
+            router.push({
+              path: `/organizations/${organizationId}/jobs/create`,
+              query: { newBankId: selectedBank.id },
+            })
+          "
           class="inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover shadow-xs transition shrink-0"
         >
           <Check class="h-4 w-4" />
@@ -546,17 +562,25 @@ async function persistQuestionOrder(questions: Question[]) {
 
       <!-- Main Dual Panel Layout -->
       <div v-if="loading" class="py-20 text-center">
-        <div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-3"></div>
+        <div
+          class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-3"
+        ></div>
         <p class="text-xs sm:text-sm text-text-muted">Loading question banks...</p>
       </div>
 
-      <div v-else-if="banks.length === 0" class="bg-card border border-border rounded-2xl p-12 text-center shadow-xs">
-        <div class="h-12 w-12 rounded-2xl bg-surface-raised border border-border mx-auto flex items-center justify-center text-text-muted mb-4">
+      <div
+        v-else-if="banks.length === 0"
+        class="bg-card border border-border rounded-2xl p-12 text-center shadow-xs"
+      >
+        <div
+          class="h-12 w-12 rounded-2xl bg-surface-raised border border-border mx-auto flex items-center justify-center text-text-muted mb-4"
+        >
           <Layers class="h-6 w-6" />
         </div>
         <h3 class="text-base sm:text-lg font-semibold text-text-strong">No Question Banks Yet</h3>
         <p class="text-xs sm:text-sm text-text-muted max-w-md mx-auto mt-1 mb-6">
-          Create topic-based question banks (e.g. "React Questions", "JavaScript Core", "System Design") to attach to candidate assessment stages.
+          Create topic-based question banks (e.g. "React Questions", "JavaScript Core", "System
+          Design") to attach to candidate assessment stages.
         </p>
         <button
           type="button"
@@ -569,7 +593,6 @@ async function persistQuestionOrder(questions: Question[]) {
       </div>
 
       <div v-else class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
         <!-- Left Column: Bank Selection List (4 cols) -->
         <div class="lg:col-span-4 space-y-3">
           <div class="text-xs font-semibold uppercase tracking-wider text-text-muted px-1">
@@ -585,14 +608,17 @@ async function persistQuestionOrder(questions: Question[]) {
                 'p-4 rounded-xl border transition-all cursor-pointer relative shadow-xs',
                 selectedBank?.id === b.id
                   ? 'bg-card border-primary ring-1 ring-primary/40'
-                  : 'bg-card border-border hover:border-border-strong hover:bg-surface-raised'
+                  : 'bg-card border-border hover:border-border-strong hover:bg-surface-raised',
               ]"
             >
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-1.5 flex-wrap">
                     <span class="text-sm font-bold text-text-strong truncate">{{ b.name }}</span>
-                    <span v-if="b.category" class="px-1.5 py-0.5 text-[10px] rounded bg-surface-raised border border-border text-text-muted">
+                    <span
+                      v-if="b.category"
+                      class="px-1.5 py-0.5 text-[10px] rounded bg-surface-raised border border-border text-text-muted"
+                    >
                       {{ b.category }}
                     </span>
                   </div>
@@ -606,7 +632,7 @@ async function persistQuestionOrder(questions: Question[]) {
                     'h-8 w-8 rounded-full flex items-center justify-center shrink-0 border transition',
                     selectedBank?.id === b.id
                       ? 'bg-primary text-white border-primary'
-                      : 'bg-surface-raised border-border text-text-muted hover:bg-gray-800'
+                      : 'bg-surface-raised border-border text-text-muted hover:bg-gray-800',
                   ]"
                   aria-hidden="true"
                 >
@@ -615,13 +641,19 @@ async function persistQuestionOrder(questions: Question[]) {
               </div>
 
               <!-- Bank Meta footer -->
-              <div class="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-[11px] text-text-muted">
-                <span>{{ b.questions_count }} {{ b.questions_count === 1 ? 'question' : 'questions' }}</span>
+              <div
+                class="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-[11px] text-text-muted"
+              >
+                <span
+                  >{{ b.questions_count }}
+                  {{ b.questions_count === 1 ? 'question' : 'questions' }}</span
+                >
                 <span v-if="isOwner(b)" class="font-medium text-primary flex items-center gap-1">
                   <User2 class="h-3 w-3" /> Created by you
                 </span>
                 <span v-else class="text-text-subtle flex items-center gap-1">
-                  <Lock class="h-3 w-3" /> {{ b.creator_name ? `By ${b.creator_name}` : 'Team Bank' }}
+                  <Lock class="h-3 w-3" />
+                  {{ b.creator_name ? `By ${b.creator_name}` : 'Team Bank' }}
                 </span>
               </div>
             </div>
@@ -629,29 +661,46 @@ async function persistQuestionOrder(questions: Question[]) {
         </div>
 
         <!-- Right Column: Selected Bank Questions Management (8 cols) -->
-        <div v-if="selectedBank" class="lg:col-span-8 bg-card border border-border rounded-2xl p-5 sm:p-7 shadow-xs space-y-6">
-          
+        <div
+          v-if="selectedBank"
+          class="lg:col-span-8 bg-card border border-border rounded-2xl p-5 sm:p-7 shadow-xs space-y-6"
+        >
           <!-- Bank Header and Actions -->
-          <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-border pb-5">
+          <div
+            class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-border pb-5"
+          >
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2 flex-wrap">
-                <h2 class="text-lg sm:text-xl font-bold text-text-strong">{{ selectedBank.name }}</h2>
-                <span v-if="selectedBank.category" class="px-2 py-0.5 text-xs font-semibold rounded-md bg-surface-raised text-text-muted border border-border">
+                <h2 class="text-lg sm:text-xl font-bold text-text-strong">
+                  {{ selectedBank.name }}
+                </h2>
+                <span
+                  v-if="selectedBank.category"
+                  class="px-2 py-0.5 text-xs font-semibold rounded-md bg-surface-raised text-text-muted border border-border"
+                >
                   {{ selectedBank.category }}
                 </span>
               </div>
-              <p v-if="selectedBank.description" class="text-xs sm:text-sm text-text-secondary mt-1.5">
+              <p
+                v-if="selectedBank.description"
+                class="text-xs sm:text-sm text-text-secondary mt-1.5"
+              >
                 {{ selectedBank.description }}
               </p>
 
               <!-- Ownership note -->
               <div class="mt-2.5 flex items-center gap-2 text-xs">
-                <span v-if="isOwner(selectedBank)" class="inline-flex items-center gap-1 font-semibold text-primary">
+                <span
+                  v-if="isOwner(selectedBank)"
+                  class="inline-flex items-center gap-1 font-semibold text-primary"
+                >
                   <CheckCircle class="h-3.5 w-3.5" /> You own this question bank
                 </span>
                 <span v-else class="inline-flex items-center gap-1 text-text-muted">
                   <Lock class="h-3.5 w-3.5 text-amber-500" />
-                  Owned by <strong>{{ selectedBank.creator_name || 'another official' }}</strong> (Read-only. Only the creator can modify or delete it.)
+                  Owned by
+                  <strong>{{ selectedBank.creator_name || 'another official' }}</strong> (Read-only.
+                  Only the creator can modify or delete it.)
                 </span>
               </div>
             </div>
@@ -676,7 +725,10 @@ async function persistQuestionOrder(questions: Question[]) {
                   <span>Delete</span>
                 </button>
               </template>
-              <div v-else class="text-[11px] text-text-subtle px-2 py-1 bg-surface-raised rounded border border-border flex items-center gap-1">
+              <div
+                v-else
+                class="text-[11px] text-text-subtle px-2 py-1 bg-surface-raised rounded border border-border flex items-center gap-1"
+              >
                 <Lock class="h-3 w-3" /> Modifying locked
               </div>
             </div>
@@ -690,7 +742,10 @@ async function persistQuestionOrder(questions: Question[]) {
               </h3>
               <p class="text-xs text-text-muted">
                 Total Assessment Points: <strong>{{ selectedBank.total_points }} pts</strong>
-                <span v-if="isOwner(selectedBank) && (selectedBank.questions?.length || 0) > 1" class="ml-2 text-text-subtle">
+                <span
+                  v-if="isOwner(selectedBank) && (selectedBank.questions?.length || 0) > 1"
+                  class="ml-2 text-text-subtle"
+                >
                   · Drag <GripHorizontal class="inline h-3 w-3 -mt-0.5" /> to reorder
                 </span>
               </p>
@@ -708,7 +763,10 @@ async function persistQuestionOrder(questions: Question[]) {
           </div>
 
           <!-- Question Cards Feed -->
-          <div v-if="!selectedBank.questions || selectedBank.questions.length === 0" class="py-12 text-center border-2 border-dashed border-border rounded-xl px-4">
+          <div
+            v-if="!selectedBank.questions || selectedBank.questions.length === 0"
+            class="py-12 text-center border-2 border-dashed border-border rounded-xl px-4"
+          >
             <HelpCircle class="h-8 w-8 text-text-subtle mx-auto mb-2" />
             <p class="text-sm font-medium text-text-strong">No questions in this bank yet</p>
             <p class="text-xs text-text-muted mt-1 max-w-sm mx-auto">
@@ -737,29 +795,33 @@ async function persistQuestionOrder(questions: Question[]) {
               @drop.prevent="onDrop(q)"
               :class="[
                 'border rounded-xl p-4 bg-surface-raised space-y-3 transition-all duration-150',
-                draggingId === q.id
-                  ? 'opacity-40 border-border'
-                  : 'border-border',
+                draggingId === q.id ? 'opacity-40 border-border' : 'border-border',
                 dragOverId === q.id && draggingId !== q.id
                   ? 'ring-2 ring-primary/60 border-primary'
-                  : ''
+                  : '',
               ]"
             >
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-2 flex-wrap mb-1">
                     <span class="text-xs font-bold text-primary">Q{{ qIndex + 1 }}</span>
-                    <span class="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded bg-card border border-border text-text-strong">
+                    <span
+                      class="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded bg-card border border-border text-text-strong"
+                    >
                       {{ formatType(q.question_type) }}
                     </span>
-                    <span class="px-2 py-0.5 text-[10px] font-medium rounded bg-card border border-border text-text-muted capitalize">
+                    <span
+                      class="px-2 py-0.5 text-[10px] font-medium rounded bg-card border border-border text-text-muted capitalize"
+                    >
                       {{ q.difficulty }}
                     </span>
                     <span class="text-xs font-bold text-text-strong">
                       {{ q.points }} {{ q.points === 1 ? 'pt' : 'pts' }}
                     </span>
                   </div>
-                  <p class="text-xs sm:text-sm text-text-strong font-medium whitespace-pre-line leading-relaxed">
+                  <p
+                    class="text-xs sm:text-sm text-text-strong font-medium whitespace-pre-line leading-relaxed"
+                  >
                     {{ q.body }}
                   </p>
                 </div>
@@ -795,7 +857,10 @@ async function persistQuestionOrder(questions: Question[]) {
               <!-- Options / Structured / Explanation — hidden while dragging so only question text is visible -->
               <template v-if="!isDragging">
                 <!-- Options preview for MCQ / True False -->
-                <div v-if="q.question_type !== 'structured' && q.options && q.options.length > 0" class="space-y-1.5 pt-1">
+                <div
+                  v-if="q.question_type !== 'structured' && q.options && q.options.length > 0"
+                  class="space-y-1.5 pt-1"
+                >
                   <div
                     v-for="opt in q.options"
                     :key="opt.id"
@@ -803,35 +868,51 @@ async function persistQuestionOrder(questions: Question[]) {
                       'flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-lg border',
                       opt.is_correct
                         ? 'bg-success-bg/40 border-success-border text-success-text font-medium'
-                        : 'bg-card border-border text-text-secondary'
+                        : 'bg-card border-border text-text-secondary',
                     ]"
                   >
                     <span
                       class="h-4 w-4 shrink-0 rounded-full flex items-center justify-center text-[10px] font-bold leading-none"
-                      :class="opt.is_correct ? 'bg-success-text text-white' : 'bg-surface-raised border border-border text-text-muted'"
+                      :class="
+                        opt.is_correct
+                          ? 'bg-success-text text-white'
+                          : 'bg-surface-raised border border-border text-text-muted'
+                      "
                     >
                       {{ optionBadge(opt) }}
                     </span>
                     <span class="flex-1 truncate">{{ opt.text }}</span>
-                    <span v-if="opt.is_correct" class="text-[10px] font-bold uppercase tracking-wider text-success-text">
+                    <span
+                      v-if="opt.is_correct"
+                      class="text-[10px] font-bold uppercase tracking-wider text-success-text"
+                    >
                       Correct Answer
                     </span>
                   </div>
                 </div>
 
                 <!-- Structured note -->
-                <div v-else-if="q.question_type === 'structured'" class="p-2.5 rounded-lg bg-card border border-border text-xs text-text-muted">
+                <div
+                  v-else-if="q.question_type === 'structured'"
+                  class="p-2.5 rounded-lg bg-card border border-border text-xs text-text-muted"
+                >
                   <div class="flex items-center gap-1.5 text-text-strong font-medium mb-0.5">
                     <FileText class="h-3.5 w-3.5 text-primary" />
                     <span>Structured Written Response</span>
                   </div>
                   <span>Candidate provides open-ended formatted text. No fixed options.</span>
-                  <p v-if="q.correct_answer" class="mt-1.5 text-[11px] text-text-secondary bg-surface-raised p-2 rounded border border-border">
+                  <p
+                    v-if="q.correct_answer"
+                    class="mt-1.5 text-[11px] text-text-secondary bg-surface-raised p-2 rounded border border-border"
+                  >
                     <strong>Model answer / rubrics:</strong> {{ q.correct_answer }}
                   </p>
                 </div>
 
-                <div v-if="q.explanation" class="text-[11px] text-text-muted italic pt-1 border-t border-border">
+                <div
+                  v-if="q.explanation"
+                  class="text-[11px] text-text-muted italic pt-1 border-t border-border"
+                >
                   Note: {{ q.explanation }}
                 </div>
               </template>
@@ -866,7 +947,9 @@ async function persistQuestionOrder(questions: Question[]) {
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-text-strong mb-1">Category (Optional)</label>
+            <label class="block text-xs font-semibold text-text-strong mb-1"
+              >Category (Optional)</label
+            >
             <input
               v-model="bankCategory"
               type="text"
@@ -876,7 +959,9 @@ async function persistQuestionOrder(questions: Question[]) {
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-text-strong mb-1">Description (Optional)</label>
+            <label class="block text-xs font-semibold text-text-strong mb-1"
+              >Description (Optional)</label
+            >
             <textarea
               v-model="bankDescription"
               rows="3"
@@ -900,7 +985,7 @@ async function persistQuestionOrder(questions: Question[]) {
             @click="saveBank"
             class="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover disabled:opacity-50 transition shadow-xs"
           >
-            {{ savingBank ? 'Saving...' : (editingBankId ? 'Update Bank' : 'Create Bank') }}
+            {{ savingBank ? 'Saving...' : editingBankId ? 'Update Bank' : 'Create Bank' }}
           </button>
         </div>
       </div>
@@ -914,7 +999,9 @@ async function persistQuestionOrder(questions: Question[]) {
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
       @click.self="showQuestionModal = false"
     >
-      <div class="bg-card border border-border rounded-2xl w-full max-w-xl p-6 shadow-xl space-y-4 my-8">
+      <div
+        class="bg-card border border-border rounded-2xl w-full max-w-xl p-6 shadow-xl space-y-4 my-8"
+      >
         <div class="flex items-center justify-between border-b border-border pb-3">
           <h3 class="text-base sm:text-lg font-bold text-text-strong">
             {{ editingQuestionId ? 'Edit Question' : 'Add Question' }}
@@ -922,7 +1009,10 @@ async function persistQuestionOrder(questions: Question[]) {
           <span class="text-xs text-text-muted">In {{ selectedBank?.name }}</span>
         </div>
 
-        <div v-if="questionError" class="p-3 rounded-lg bg-danger-bg text-danger border border-danger/20 text-xs flex items-center gap-2">
+        <div
+          v-if="questionError"
+          class="p-3 rounded-lg bg-danger-bg text-danger border border-danger/20 text-xs flex items-center gap-2"
+        >
           <AlertCircle class="h-4 w-4 shrink-0" />
           <span>{{ questionError }}</span>
         </div>
@@ -930,7 +1020,9 @@ async function persistQuestionOrder(questions: Question[]) {
         <div class="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
           <!-- Question prompt -->
           <div>
-            <label class="block text-xs font-semibold text-text-strong mb-1">Question Prompt *</label>
+            <label class="block text-xs font-semibold text-text-strong mb-1"
+              >Question Prompt *</label
+            >
             <textarea
               v-model="qBody"
               rows="3"
@@ -979,7 +1071,10 @@ async function persistQuestionOrder(questions: Question[]) {
           </div>
 
           <!-- Dynamic Options Section based on Type -->
-          <div v-if="qType === 'single_choice' || qType === 'multiple_choice'" class="space-y-3 pt-2">
+          <div
+            v-if="qType === 'single_choice' || qType === 'multiple_choice'"
+            class="space-y-3 pt-2"
+          >
             <div class="flex items-center justify-between">
               <label class="text-xs font-semibold text-text-strong">
                 Options & Correct Answer(s) *
@@ -994,11 +1089,7 @@ async function persistQuestionOrder(questions: Question[]) {
             </div>
 
             <div class="space-y-2">
-              <div
-                v-for="(opt, idx) in qOptions"
-                :key="idx"
-                class="flex items-center gap-2"
-              >
+              <div v-for="(opt, idx) in qOptions" :key="idx" class="flex items-center gap-2">
                 <button
                   type="button"
                   @click="handleOptionCheck(idx)"
@@ -1006,7 +1097,7 @@ async function persistQuestionOrder(questions: Question[]) {
                     'h-6 w-6 rounded-md border flex items-center justify-center shrink-0 transition cursor-pointer',
                     opt.is_correct
                       ? 'bg-primary border-primary text-white'
-                      : 'border-border bg-card text-transparent hover:border-text-muted'
+                      : 'border-border bg-card text-transparent hover:border-text-muted',
                   ]"
                   :title="qType === 'single_choice' ? 'Mark as correct' : 'Toggle correct'"
                 >
@@ -1036,7 +1127,11 @@ async function persistQuestionOrder(questions: Question[]) {
               </div>
             </div>
             <p class="text-[11px] text-text-muted">
-              {{ qType === 'single_choice' ? 'Check the single radio/box corresponding to the correct answer.' : 'Check all options that are valid correct answers.' }}
+              {{
+                qType === 'single_choice'
+                  ? 'Check the single radio/box corresponding to the correct answer.'
+                  : 'Check all options that are valid correct answers.'
+              }}
             </p>
           </div>
 
@@ -1044,7 +1139,9 @@ async function persistQuestionOrder(questions: Question[]) {
           <div v-else-if="qType === 'true_false'" class="space-y-2 pt-2">
             <label class="block text-xs font-semibold text-text-strong">Correct Answer *</label>
             <div class="flex gap-4">
-              <label class="flex items-center gap-2 text-xs sm:text-sm text-text-strong cursor-pointer">
+              <label
+                class="flex items-center gap-2 text-xs sm:text-sm text-text-strong cursor-pointer"
+              >
                 <input
                   type="radio"
                   name="tfOption"
@@ -1054,7 +1151,9 @@ async function persistQuestionOrder(questions: Question[]) {
                 />
                 True is correct
               </label>
-              <label class="flex items-center gap-2 text-xs sm:text-sm text-text-strong cursor-pointer">
+              <label
+                class="flex items-center gap-2 text-xs sm:text-sm text-text-strong cursor-pointer"
+              >
                 <input
                   type="radio"
                   name="tfOption"
@@ -1068,16 +1167,22 @@ async function persistQuestionOrder(questions: Question[]) {
           </div>
 
           <!-- Structured Info -->
-          <div v-else-if="qType === 'structured'" class="space-y-3 pt-2 p-3 bg-surface-raised rounded-xl border border-border">
+          <div
+            v-else-if="qType === 'structured'"
+            class="space-y-3 pt-2 p-3 bg-surface-raised rounded-xl border border-border"
+          >
             <div class="flex items-center gap-1.5 text-xs font-semibold text-text-strong">
               <FileText class="h-4 w-4 text-primary" />
               <span>Structured Question (Open-Ended)</span>
             </div>
             <p class="text-[11px] text-text-muted leading-relaxed">
-              No multiple choice options are required. The candidate will be provided a rich response area during the assessment.
+              No multiple choice options are required. The candidate will be provided a rich
+              response area during the assessment.
             </p>
             <div>
-              <label class="block text-xs font-semibold text-text-strong mb-1">Model Answer / Evaluation Rubrics (Optional)</label>
+              <label class="block text-xs font-semibold text-text-strong mb-1"
+                >Model Answer / Evaluation Rubrics (Optional)</label
+              >
               <textarea
                 v-model="qCorrectAnswer"
                 rows="2"
@@ -1089,7 +1194,9 @@ async function persistQuestionOrder(questions: Question[]) {
 
           <!-- Explanation / Note -->
           <div>
-            <label class="block text-xs font-semibold text-text-strong mb-1">Explanation / Candidate Feedback (Optional)</label>
+            <label class="block text-xs font-semibold text-text-strong mb-1"
+              >Explanation / Candidate Feedback (Optional)</label
+            >
             <textarea
               v-model="qExplanation"
               rows="2"
@@ -1113,7 +1220,9 @@ async function persistQuestionOrder(questions: Question[]) {
             @click="saveQuestion"
             class="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover disabled:opacity-50 transition shadow-xs"
           >
-            {{ savingQuestion ? 'Saving...' : (editingQuestionId ? 'Update Question' : 'Save Question') }}
+            {{
+              savingQuestion ? 'Saving...' : editingQuestionId ? 'Update Question' : 'Save Question'
+            }}
           </button>
         </div>
       </div>

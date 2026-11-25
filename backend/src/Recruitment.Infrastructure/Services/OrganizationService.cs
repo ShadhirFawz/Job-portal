@@ -14,9 +14,15 @@ public class OrganizationService : IOrganizationService
         _supabase = supabase;
     }
 
-    public async Task<OrganizationDto?> GetOrganizationAsync(Guid id)
+    public async Task<OrganizationDto?> GetOrganizationAsync(string identifier)
     {
-        var org = await _supabase.GetSingleAsync<Organization>($"organizations?id=eq.{id}&select=*");
+        if (Guid.TryParse(identifier, out var parsedGuid))
+        {
+            var byId = await _supabase.GetSingleAsync<Organization>($"organizations?id=eq.{parsedGuid}&select=*");
+            if (byId != null) return MapToDto(byId);
+        }
+
+        var org = await _supabase.GetSingleAsync<Organization>($"organizations?slug=eq.{Uri.EscapeDataString(identifier)}&select=*");
         return org != null ? MapToDto(org) : null;
     }
 
@@ -212,6 +218,7 @@ public class OrganizationService : IOrganizationService
         return new OrganizationDto
         {
             Id = org.Id,
+            Slug = org.Slug,
             Name = org.Name,
             LegalName = org.LegalName,
             OfficialEmail = org.OfficialEmail,

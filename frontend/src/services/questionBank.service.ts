@@ -35,7 +35,7 @@ export const questionBankService = {
     return await api.post<QuestionBank>(
       'questionbanks',
       payload,
-      { organizationId, userId }
+      { organization: organizationId, organizationId, userId }
     )
   },
 

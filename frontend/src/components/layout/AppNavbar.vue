@@ -55,6 +55,8 @@ const primaryOrg = computed(() => {
   return orgStore.myOrganizations.length > 0 ? orgStore.myOrganizations[0] : null
 })
 
+const primaryOrgSlug = computed(() => primaryOrg.value?.slug || primaryOrg.value?.id)
+
 onMounted(async () => {
   if (auth.user) {
     await orgStore.fetchMyOrganizations()
@@ -151,10 +153,10 @@ function isActive(path: string): boolean {
             <template v-if="userRole === 'org_admin' || userRole === 'org_staff'">
               <router-link
                 v-if="primaryOrg"
-                :to="`/organizations/${primaryOrg.id}`"
+                :to="`/organizations/${primaryOrgSlug}`"
                 :class="[
                   'px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5',
-                  isActive(`/organizations/${primaryOrg.id}`) && !route.path.includes('/jobs/create')
+                  isActive(`/organizations/${primaryOrgSlug}`) && !route.path.includes('/jobs/create')
                     ? 'bg-primary-light text-primary'
                     : 'text-text-muted hover:text-text-strong hover:bg-surface-raised',
                 ]"
@@ -165,10 +167,10 @@ function isActive(path: string): boolean {
 
               <router-link
                 v-if="primaryOrg"
-                :to="`/organizations/${primaryOrg.id}/jobs/create`"
+                :to="`/organizations/${primaryOrgSlug}/jobs/create`"
                 :class="[
                   'px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5',
-                  isActive(`/organizations/${primaryOrg.id}/jobs/create`)
+                  isActive(`/organizations/${primaryOrgSlug}/jobs/create`)
                     ? 'bg-primary-light text-primary'
                     : 'text-text-muted hover:text-text-strong hover:bg-surface-raised',
                 ]"
@@ -181,10 +183,10 @@ function isActive(path: string): boolean {
             <template v-else-if="userRole === 'candidate'">
               <router-link
                 v-if="primaryOrg"
-                :to="`/organizations/${primaryOrg.id}`"
+                :to="`/organizations/${primaryOrgSlug}`"
                 :class="[
                   'px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5',
-                  isActive(`/organizations/${primaryOrg.id}`)
+                  isActive(`/organizations/${primaryOrgSlug}`)
                     ? 'bg-primary-light text-primary'
                     : 'text-text-muted hover:text-text-strong hover:bg-surface-raised',
                 ]"
@@ -211,10 +213,10 @@ function isActive(path: string): boolean {
             <template v-else-if="userRole === 'super_admin'">
               <router-link
                 v-if="primaryOrg"
-                :to="`/organizations/${primaryOrg.id}`"
+                :to="`/organizations/${primaryOrgSlug}`"
                 :class="[
                   'px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5',
-                  isActive(`/organizations/${primaryOrg.id}`)
+                  isActive(`/organizations/${primaryOrgSlug}`)
                     ? 'bg-primary-light text-primary'
                     : 'text-text-muted hover:text-text-strong hover:bg-surface-raised',
                 ]"
@@ -358,7 +360,7 @@ function isActive(path: string): boolean {
 
                   <router-link
                     v-if="primaryOrg"
-                    :to="`/organizations/${primaryOrg.id}`"
+                    :to="`/organizations/${primaryOrgSlug}`"
                     @click="isUserMenuOpen = false"
                     class="flex items-center gap-2.5 px-4 py-2 text-text-muted hover:bg-surface-raised hover:text-primary transition"
                   >
@@ -368,7 +370,7 @@ function isActive(path: string): boolean {
 
                   <router-link
                     v-if="primaryOrg && (userRole === 'org_admin' || userRole === 'org_staff')"
-                    :to="`/organizations/${primaryOrg.id}/jobs/create`"
+                    :to="`/organizations/${primaryOrgSlug}/jobs/create`"
                     @click="isUserMenuOpen = false"
                     class="flex items-center gap-2.5 px-4 py-2 text-text-muted hover:bg-surface-raised hover:text-primary transition"
                   >
@@ -581,11 +583,11 @@ function isActive(path: string): boolean {
             <template v-if="userRole === 'org_admin' || userRole === 'org_staff'">
               <router-link
                 v-if="primaryOrg"
-                :to="`/organizations/${primaryOrg.id}`"
+                :to="`/organizations/${primaryOrgSlug}`"
                 @click="closeMenus"
                 :class="[
                   'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition',
-                  isActive(`/organizations/${primaryOrg.id}`) && !route.path.includes('/jobs/create')
+                  isActive(`/organizations/${primaryOrgSlug}`) && !route.path.includes('/jobs/create')
                     ? 'bg-primary-light text-primary'
                     : 'text-text-muted hover:bg-surface-raised hover:text-text-strong',
                 ]"
@@ -596,11 +598,11 @@ function isActive(path: string): boolean {
 
               <router-link
                 v-if="primaryOrg"
-                :to="`/organizations/${primaryOrg.id}/jobs/create`"
+                :to="`/organizations/${primaryOrgSlug}/jobs/create`"
                 @click="closeMenus"
                 :class="[
                   'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition',
-                  isActive(`/organizations/${primaryOrg.id}/jobs/create`)
+                  isActive(`/organizations/${primaryOrgSlug}/jobs/create`)
                     ? 'bg-primary-light text-primary'
                     : 'text-text-muted hover:bg-surface-raised hover:text-text-strong',
                 ]"
@@ -613,11 +615,11 @@ function isActive(path: string): boolean {
             <template v-else-if="userRole === 'candidate'">
               <router-link
                 v-if="primaryOrg"
-                :to="`/organizations/${primaryOrg.id}`"
+                :to="`/organizations/${primaryOrgSlug}`"
                 @click="closeMenus"
                 :class="[
                   'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition',
-                  isActive(`/organizations/${primaryOrg.id}`)
+                  isActive(`/organizations/${primaryOrgSlug}`)
                     ? 'bg-primary-light text-primary'
                     : 'text-text-muted hover:bg-surface-raised hover:text-text-strong',
                 ]"

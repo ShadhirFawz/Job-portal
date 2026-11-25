@@ -107,6 +107,17 @@ public class JobService : IJobService
         return list.Select(MapToDto).ToList();
     }
 
+    public async Task<List<JobDto>> GetOrganizationJobsBySlugAsync(string slug)
+    {
+        if (Guid.TryParse(slug, out var parsedGuid))
+        {
+            return await GetOrganizationJobsAsync(parsedGuid);
+        }
+        var org = await _supabase.GetSingleAsync<Organization>($"organizations?slug=eq.{Uri.EscapeDataString(slug)}&select=id");
+        if (org == null) return [];
+        return await GetOrganizationJobsAsync(org.Id);
+    }
+
     public async Task<JobDto> UpdateJobAsync(Guid id, Guid userId, UpdateJobRequest request)
     {
         var existing = await _supabase.GetSingleAsync<Job>($"jobs?id=eq.{id}&deleted_at=is.null");
@@ -221,6 +232,31 @@ public class JobService : IJobService
         return (await GetJobByIdAsync(id))!;
     }
 
+    public async Task<Guid> GetJobIdBySlugAsync(string slug)
+    {
+        if (Guid.TryParse(slug, out var parsedGuid))
+        {
+            var byId = await _supabase.GetSingleAsync<Job>($"jobs?id=eq.{parsedGuid}&deleted_at=is.null");
+            if (byId != null) return byId.Id;
+        }
+        var job = await _supabase.GetSingleAsync<Job>($"jobs?slug=eq.{Uri.EscapeDataString(slug)}&deleted_at=is.null");
+        return job?.Id ?? Guid.Empty;
+    }
+
+    public async Task<JobDto?> GetJobBySlugAsync(string slug, bool publicOnly = false)
+    {
+        if (Guid.TryParse(slug, out var parsedGuid))
+        {
+            var byId = await GetJobByIdAsync(parsedGuid, publicOnly);
+            if (byId != null) return byId;
+        }
+        var query = $"jobs?slug=eq.{Uri.EscapeDataString(slug)}&deleted_at=is.null";
+        if (publicOnly) query += "&status=eq.published";
+        query += "&select=*,organization:organizations(id,name,slug,avatar_path,industry,city,country_code,website_url),selection_processes:job_selection_processes(*)";
+        var job = await _supabase.GetSingleAsync<Job>(query);
+        return job != null ? MapToDto(job) : null;
+    }
+
     private static JobDto MapToDto(Job j)
     {
         return new JobDto
@@ -269,6 +305,7 @@ public class JobService : IJobService
             Organization = j.Organization != null ? MapOrgToDto(j.Organization) : null,
             SelectionProcesses = j.SelectionProcesses?.Select(sp => new SelectionProcessDto
             {
+                Slug = sp.Slug,
                 Id = sp.Id,
                 JobId = sp.JobId,
                 Title = sp.Title,

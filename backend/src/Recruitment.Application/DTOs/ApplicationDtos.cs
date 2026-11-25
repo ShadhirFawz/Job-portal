@@ -102,6 +102,9 @@ public class JobApplicationDto
 
     [JsonPropertyName("resume")]
     public JobApplicationResumeDto? Resume { get; set; }
+
+    [JsonPropertyName("slug")]
+    public string? Slug { get; set; }
 }
 
 public class CreateApplicationRequest

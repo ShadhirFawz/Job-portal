@@ -40,12 +40,12 @@ export const jobService = {
   /**
    * Fetch a single job by ID via .NET backend API.
    */
-  async fetchJobById(id: string, publicOnly = false): Promise<Job | null> {
-    if (!id) return null
+  async fetchJobById(slug: string, publicOnly = false): Promise<Job | null> {
+    if (!slug) return null
     try {
-      return await api.get<Job>(`jobs/${id}`, { publicOnly })
+      return await api.get<Job>(`jobs/${slug}`, { publicOnly })
     } catch (error) {
-      console.error('Error fetching job by ID via API:', error)
+      console.error('Error fetching job by slug via API:', error)
       return null
     }
   },

@@ -30,7 +30,7 @@ const router = useRouter()
 const auth = useAuthStore()
 const orgStore = useOrganizationsStore()
 
-const orgId = route.params.id as string
+const orgId = route.params.slug as string
 
 const pageLoading = ref(true)
 const saving = ref(false)
@@ -113,7 +113,7 @@ async function loadAndAuthorize() {
       orgId,
       auth.user.id,
       auth.user.role,
-      org.created_by
+      org.created_by,
     )
 
     if (!isAllowed) {
@@ -249,7 +249,8 @@ async function handleSave() {
     }
 
     // Prepare update payload
-    const emailChanged = officialEmail.value.trim().toLowerCase() !== originalOfficialEmail.value.trim().toLowerCase()
+    const emailChanged =
+      officialEmail.value.trim().toLowerCase() !== originalOfficialEmail.value.trim().toLowerCase()
 
     const updatePayload: Record<string, any> = {
       name: name.value.trim(),
@@ -308,9 +309,11 @@ async function handleSave() {
 <template>
   <div class="min-h-screen bg-page py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
     <div class="max-w-4xl mx-auto space-y-6">
-      
       <!-- Loading State -->
-      <div v-if="pageLoading" class="flex flex-col items-center justify-center py-24 text-text-muted">
+      <div
+        v-if="pageLoading"
+        class="flex flex-col items-center justify-center py-24 text-text-muted"
+      >
         <Loader2 class="h-8 w-8 animate-spin text-primary" />
         <p class="mt-3 text-xs sm:text-sm">Verifying permissions and loading company details…</p>
       </div>
@@ -320,7 +323,9 @@ async function handleSave() {
         v-else-if="!authorized"
         class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-danger-border p-6 sm:p-8 text-center space-y-4"
       >
-        <div class="h-12 w-12 rounded-full bg-danger-bg text-danger flex items-center justify-center mx-auto">
+        <div
+          class="h-12 w-12 rounded-full bg-danger-bg text-danger flex items-center justify-center mx-auto"
+        >
           <ShieldAlert class="h-6 w-6" />
         </div>
         <h2 class="text-lg sm:text-xl font-bold text-text-strong">Access Denied</h2>
@@ -337,7 +342,6 @@ async function handleSave() {
 
       <!-- Edit Form -->
       <div v-else class="space-y-6">
-        
         <!-- Top Navigation & Heading -->
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div class="space-y-1">
@@ -377,32 +381,43 @@ async function handleSave() {
         </div>
 
         <!-- Error Message Banner -->
-        <div v-if="errorMsg" class="alert alert-error p-4 text-xs sm:text-sm flex items-start gap-3">
+        <div
+          v-if="errorMsg"
+          class="alert alert-error p-4 text-xs sm:text-sm flex items-start gap-3"
+        >
           <AlertCircle class="h-5 w-5 shrink-0 text-danger mt-0.5" />
           <span class="leading-relaxed">{{ errorMsg }}</span>
         </div>
 
         <form @submit.prevent="handleSave" class="space-y-6">
-          
           <!-- 1. BRANDING & MEDIA -->
-          <div class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border overflow-hidden">
+          <div
+            class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border overflow-hidden"
+          >
             <div class="p-4 sm:p-6 border-b border-border">
               <h2 class="text-base sm:text-lg font-semibold text-text-strong">Visual Branding</h2>
-              <p class="text-xs sm:text-sm text-text-muted mt-0.5">Upload high-resolution images for your company cover and logo.</p>
+              <p class="text-xs sm:text-sm text-text-muted mt-0.5">
+                Upload high-resolution images for your company cover and logo.
+              </p>
             </div>
 
             <!-- Cover Image Box -->
             <div class="p-4 sm:p-6 space-y-6">
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-2">Company Cover Banner</label>
-                <div class="relative h-40 sm:h-52 rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-r from-brand-from via-brand-via to-brand-to border border-border shadow-inner group">
-                  
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-2"
+                  >Company Cover Banner</label
+                >
+                <div
+                  class="relative h-40 sm:h-52 rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-r from-brand-from via-brand-via to-brand-to border border-border shadow-inner group"
+                >
                   <!-- Watermark when no image preview -->
                   <div
                     v-if="!coverPreview"
                     class="absolute inset-0 flex items-center justify-end pr-10 pointer-events-none select-none opacity-20"
                   >
-                    <span class="text-7xl sm:text-9xl font-black text-white uppercase">{{ companyInitial }}</span>
+                    <span class="text-7xl sm:text-9xl font-black text-white uppercase">{{
+                      companyInitial
+                    }}</span>
                   </div>
 
                   <img
@@ -415,7 +430,9 @@ async function handleSave() {
 
                   <!-- Cover Buttons Overlay -->
                   <div class="absolute bottom-3 right-3 flex items-center gap-2">
-                    <label class="inline-flex items-center gap-1.5 bg-card/90 hover:bg-card text-text-secondary hover:text-text-strong text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer shadow-md backdrop-blur-xs transition border border-border">
+                    <label
+                      class="inline-flex items-center gap-1.5 bg-card/90 hover:bg-card text-text-secondary hover:text-text-strong text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer shadow-md backdrop-blur-xs transition border border-border"
+                    >
                       <Camera class="h-3.5 w-3.5 text-text-muted" />
                       {{ coverPreview ? 'Change Cover' : 'Upload Cover' }}
                       <input type="file" accept="image/*" class="hidden" @change="onCoverChange" />
@@ -431,13 +448,19 @@ async function handleSave() {
                     </button>
                   </div>
                 </div>
-                <p class="text-[11px] sm:text-xs text-text-muted mt-2">Recommended: 1200×400px. JPG, PNG or WebP up to 5MB.</p>
+                <p class="text-[11px] sm:text-xs text-text-muted mt-2">
+                  Recommended: 1200×400px. JPG, PNG or WebP up to 5MB.
+                </p>
               </div>
 
               <!-- Avatar / Logo Box -->
-              <div class="pt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+              <div
+                class="pt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6"
+              >
                 <div class="relative">
-                  <div class="h-20 w-20 sm:h-24 sm:w-24 rounded-xl sm:rounded-2xl ring-4 ring-card bg-primary text-white overflow-hidden shadow-md flex items-center justify-center flex-shrink-0">
+                  <div
+                    class="h-20 w-20 sm:h-24 sm:w-24 rounded-xl sm:rounded-2xl ring-4 ring-card bg-primary text-white overflow-hidden shadow-md flex items-center justify-center flex-shrink-0"
+                  >
                     <img
                       v-if="avatarPreview"
                       :src="avatarPreview"
@@ -451,9 +474,13 @@ async function handleSave() {
                 </div>
 
                 <div class="space-y-2 min-w-0 flex-1">
-                  <span class="block text-xs sm:text-sm font-medium text-text-secondary">Company Logo / Avatar</span>
+                  <span class="block text-xs sm:text-sm font-medium text-text-secondary"
+                    >Company Logo / Avatar</span
+                  >
                   <div class="flex flex-wrap items-center gap-2">
-                    <label class="inline-flex items-center gap-1.5 bg-card border border-border hover:bg-surface-raised text-text-secondary text-xs font-semibold px-3 py-2 rounded-lg cursor-pointer shadow-xs transition">
+                    <label
+                      class="inline-flex items-center gap-1.5 bg-card border border-border hover:bg-surface-raised text-text-secondary text-xs font-semibold px-3 py-2 rounded-lg cursor-pointer shadow-xs transition"
+                    >
                       <Upload class="h-3.5 w-3.5 text-text-muted flex-shrink-0" />
                       {{ avatarPreview ? 'Change Logo' : 'Upload Logo' }}
                       <input type="file" accept="image/*" class="hidden" @change="onAvatarChange" />
@@ -468,17 +495,24 @@ async function handleSave() {
                       Remove
                     </button>
                   </div>
-                  <p class="text-[11px] sm:text-xs text-text-muted">Square ratio recommended (e.g. 256×256px). Displays first letter initial if omitted.</p>
+                  <p class="text-[11px] sm:text-xs text-text-muted">
+                    Square ratio recommended (e.g. 256×256px). Displays first letter initial if
+                    omitted.
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- 2. BASIC INFORMATION -->
-          <div class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-4 sm:p-6 lg:p-8 space-y-6">
+          <div
+            class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-4 sm:p-6 lg:p-8 space-y-6"
+          >
             <div>
               <h2 class="text-base sm:text-lg font-semibold text-text-strong">Company Details</h2>
-              <p class="text-xs sm:text-sm text-text-muted mt-0.5">Primary information displayed on your company profile and job postings.</p>
+              <p class="text-xs sm:text-sm text-text-muted mt-0.5">
+                Primary information displayed on your company profile and job postings.
+              </p>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -486,25 +520,20 @@ async function handleSave() {
                 <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">
                   Company Name <span class="text-danger">*</span>
                 </label>
-                <input
-                  v-model="name"
-                  type="text"
-                  required
-                  placeholder="Acme Corporation"
-                />
+                <input v-model="name" type="text" required placeholder="Acme Corporation" />
               </div>
 
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Legal / Registered Name</label>
-                <input
-                  v-model="legalName"
-                  type="text"
-                  placeholder="Acme Technologies Inc."
-                />
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Legal / Registered Name</label
+                >
+                <input v-model="legalName" type="text" placeholder="Acme Technologies Inc." />
               </div>
 
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Tagline</label>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Tagline</label
+                >
                 <input
                   v-model="tagline"
                   type="text"
@@ -513,7 +542,9 @@ async function handleSave() {
               </div>
 
               <div class="sm:col-span-2">
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">About / Description</label>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >About / Description</label
+                >
                 <textarea
                   v-model="description"
                   rows="4"
@@ -522,7 +553,9 @@ async function handleSave() {
               </div>
 
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Industry</label>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Industry</label
+                >
                 <input
                   v-model="industry"
                   type="text"
@@ -531,7 +564,9 @@ async function handleSave() {
               </div>
 
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Company Size</label>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Company Size</label
+                >
                 <select v-model="companySize">
                   <option value="">Select size</option>
                   <option value="1-10">1-10 employees</option>
@@ -544,7 +579,9 @@ async function handleSave() {
               </div>
 
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Founded Year</label>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Founded Year</label
+                >
                 <input
                   v-model.number="foundedYear"
                   type="number"
@@ -555,7 +592,9 @@ async function handleSave() {
               </div>
 
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Company Type</label>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Company Type</label
+                >
                 <select v-model="companyType">
                   <option value="">Select company type</option>
                   <option value="Privately Held">Privately Held</option>
@@ -570,10 +609,16 @@ async function handleSave() {
           </div>
 
           <!-- 3. CONTACT & EMAILS -->
-          <div class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-4 sm:p-6 lg:p-8 space-y-6">
+          <div
+            class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-4 sm:p-6 lg:p-8 space-y-6"
+          >
             <div>
-              <h2 class="text-base sm:text-lg font-semibold text-text-strong">Contact & Communication</h2>
-              <p class="text-xs sm:text-sm text-text-muted mt-0.5">Official company channels and candidate inquiry contacts.</p>
+              <h2 class="text-base sm:text-lg font-semibold text-text-strong">
+                Contact & Communication
+              </h2>
+              <p class="text-xs sm:text-sm text-text-muted mt-0.5">
+                Official company channels and candidate inquiry contacts.
+              </p>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -589,15 +634,20 @@ async function handleSave() {
                     class="pl-10"
                     placeholder="admin@company.com"
                   />
-                  <Mail class="h-4 w-4 text-text-subtle absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Mail
+                    class="h-4 w-4 text-text-subtle absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  />
                 </div>
                 <p class="text-[11px] sm:text-xs text-warning-text mt-1">
-                  Note: Changing your official company email will require re-verifying the email address.
+                  Note: Changing your official company email will require re-verifying the email
+                  address.
                 </p>
               </div>
 
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Support / Careers Email</label>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Support / Careers Email</label
+                >
                 <div class="relative">
                   <input
                     v-model="supportEmail"
@@ -605,25 +655,28 @@ async function handleSave() {
                     class="pl-10"
                     placeholder="careers@company.com"
                   />
-                  <Mail class="h-4 w-4 text-text-subtle absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Phone Number</label>
-                <div class="relative">
-                  <input
-                    v-model="phone"
-                    type="tel"
-                    class="pl-10"
-                    placeholder="+1 (555) 012-3456"
+                  <Mail
+                    class="h-4 w-4 text-text-subtle absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
                   />
-                  <Phone class="h-4 w-4 text-text-subtle absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               </div>
 
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Website URL</label>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Phone Number</label
+                >
+                <div class="relative">
+                  <input v-model="phone" type="tel" class="pl-10" placeholder="+1 (555) 012-3456" />
+                  <Phone
+                    class="h-4 w-4 text-text-subtle absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Website URL</label
+                >
                 <div class="relative">
                   <input
                     v-model="websiteUrl"
@@ -631,27 +684,38 @@ async function handleSave() {
                     class="pl-10"
                     placeholder="https://example.com"
                   />
-                  <Globe class="h-4 w-4 text-text-subtle absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <Globe
+                    class="h-4 w-4 text-text-subtle absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  />
                 </div>
               </div>
             </div>
           </div>
 
           <!-- 4. LOCATION & OFFICE -->
-          <div class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-4 sm:p-6 lg:p-8 space-y-6">
+          <div
+            class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-4 sm:p-6 lg:p-8 space-y-6"
+          >
             <div>
               <h2 class="text-base sm:text-lg font-semibold text-text-strong">Location & Office</h2>
-              <p class="text-xs sm:text-sm text-text-muted mt-0.5">Physical headquarters or office location details.</p>
+              <p class="text-xs sm:text-sm text-text-muted mt-0.5">
+                Physical headquarters or office location details.
+              </p>
             </div>
 
-            <div class="flex items-center gap-3 p-4 bg-surface-raised rounded-xl border border-border">
+            <div
+              class="flex items-center gap-3 p-4 bg-surface-raised rounded-xl border border-border"
+            >
               <input
                 id="hasOfficeCheck"
                 v-model="hasPhysicalOffice"
                 type="checkbox"
                 class="h-4.5 w-4.5 rounded border-border text-primary focus:ring-2 focus:ring-primary/25 cursor-pointer"
               />
-              <label for="hasOfficeCheck" class="text-xs sm:text-sm font-medium text-text-strong cursor-pointer select-none mb-0">
+              <label
+                for="hasOfficeCheck"
+                class="text-xs sm:text-sm font-medium text-text-strong cursor-pointer select-none mb-0"
+              >
                 This organization operates with a physical office location
               </label>
             </div>
@@ -683,7 +747,9 @@ async function handleSave() {
               <!-- Manual Address Fields -->
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 pt-2">
                 <div>
-                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Country Code (2-letter ISO)</label>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                    >Country Code (2-letter ISO)</label
+                  >
                   <input
                     v-model="countryCode"
                     type="text"
@@ -693,64 +759,66 @@ async function handleSave() {
                   />
                 </div>
 
-              <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">State / Province</label>
-                <input
-                  v-model="stateProvince"
-                  type="text"
-                  placeholder="e.g. California"
-                />
-              </div>
+                <div>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                    >State / Province</label
+                  >
+                  <input v-model="stateProvince" type="text" placeholder="e.g. California" />
+                </div>
 
-              <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">City</label>
-                <input
-                  v-model="city"
-                  type="text"
-                  placeholder="e.g. San Francisco"
-                />
-              </div>
+                <div>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                    >City</label
+                  >
+                  <input v-model="city" type="text" placeholder="e.g. San Francisco" />
+                </div>
 
-              <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Postal Code</label>
-                <input
-                  v-model="postalCode"
-                  type="text"
-                  placeholder="e.g. 94107"
-                />
-              </div>
+                <div>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                    >Postal Code</label
+                  >
+                  <input v-model="postalCode" type="text" placeholder="e.g. 94107" />
+                </div>
 
-              <div class="sm:col-span-2">
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Address Line 1</label>
-                <input
-                  v-model="addressLine1"
-                  type="text"
-                  placeholder="e.g. 100 Market St, Suite 400"
-                />
-              </div>
+                <div class="sm:col-span-2">
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                    >Address Line 1</label
+                  >
+                  <input
+                    v-model="addressLine1"
+                    type="text"
+                    placeholder="e.g. 100 Market St, Suite 400"
+                  />
+                </div>
 
-              <div class="sm:col-span-2">
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Address Line 2 (Optional)</label>
-                <input
-                  v-model="addressLine2"
-                  type="text"
-                  placeholder="Building B, Floor 4"
-                />
+                <div class="sm:col-span-2">
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                    >Address Line 2 (Optional)</label
+                  >
+                  <input v-model="addressLine2" type="text" placeholder="Building B, Floor 4" />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
           <!-- 5. SOCIAL & WEB PRESENCE -->
-          <div class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-4 sm:p-6 lg:p-8 space-y-6">
+          <div
+            class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-4 sm:p-6 lg:p-8 space-y-6"
+          >
             <div>
-              <h2 class="text-base sm:text-lg font-semibold text-text-strong">Social & Web Links</h2>
-              <p class="text-xs sm:text-sm text-text-muted mt-0.5">Connect your social profiles to increase company visibility.</p>
+              <h2 class="text-base sm:text-lg font-semibold text-text-strong">
+                Social & Web Links
+              </h2>
+              <p class="text-xs sm:text-sm text-text-muted mt-0.5">
+                Connect your social profiles to increase company visibility.
+              </p>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">LinkedIn Profile</label>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >LinkedIn Profile</label
+                >
                 <input
                   v-model="linkedinUrl"
                   type="url"
@@ -759,34 +827,30 @@ async function handleSave() {
               </div>
 
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Twitter / X Profile</label>
-                <input
-                  v-model="twitterUrl"
-                  type="url"
-                  placeholder="https://x.com/acme"
-                />
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Twitter / X Profile</label
+                >
+                <input v-model="twitterUrl" type="url" placeholder="https://x.com/acme" />
               </div>
 
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Facebook Page</label>
-                <input
-                  v-model="facebookUrl"
-                  type="url"
-                  placeholder="https://facebook.com/acme"
-                />
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Facebook Page</label
+                >
+                <input v-model="facebookUrl" type="url" placeholder="https://facebook.com/acme" />
               </div>
 
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">GitHub Organization</label>
-                <input
-                  v-model="githubUrl"
-                  type="url"
-                  placeholder="https://github.com/acme"
-                />
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >GitHub Organization</label
+                >
+                <input v-model="githubUrl" type="url" placeholder="https://github.com/acme" />
               </div>
 
               <div class="sm:col-span-2">
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Glassdoor Company Profile</label>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Glassdoor Company Profile</label
+                >
                 <input
                   v-model="glassdoorUrl"
                   type="url"
@@ -797,7 +861,9 @@ async function handleSave() {
           </div>
 
           <!-- Bottom Actions -->
-          <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
+          <div
+            class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4"
+          >
             <router-link
               :to="`/organizations/${orgId}`"
               class="px-5 py-3 text-xs sm:text-sm font-medium text-text-secondary bg-card border border-border rounded-xl hover:bg-surface-raised transition text-center shadow-xs"

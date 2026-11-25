@@ -10,12 +10,12 @@ import {
   ChevronRight,
   HelpCircle,
   FileQuestion,
-  Sparkles
+  Sparkles,
 } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
-const organizationId = route.params.orgId as string
+const organizationId = route.params.slug as string
 
 const banks = ref<QuestionBank[]>([])
 const loading = ref(true)
@@ -35,9 +35,10 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen bg-page py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-5xl mx-auto space-y-6">
-      
       <!-- Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5">
+      <div
+        class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-5"
+      >
         <div>
           <button
             type="button"
@@ -68,17 +69,27 @@ onMounted(async () => {
 
       <!-- Content -->
       <div v-if="loading" class="py-16 text-center">
-        <div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-3"></div>
+        <div
+          class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-3"
+        ></div>
         <p class="text-xs sm:text-sm text-text-muted">Loading question banks...</p>
       </div>
 
-      <div v-else-if="banks.length === 0" class="bg-card border border-border rounded-2xl p-12 text-center shadow-xs">
-        <div class="h-12 w-12 rounded-2xl bg-surface-raised border border-border mx-auto flex items-center justify-center text-text-muted mb-4">
+      <div
+        v-else-if="banks.length === 0"
+        class="bg-card border border-border rounded-2xl p-12 text-center shadow-xs"
+      >
+        <div
+          class="h-12 w-12 rounded-2xl bg-surface-raised border border-border mx-auto flex items-center justify-center text-text-muted mb-4"
+        >
           <Layers class="h-6 w-6" />
         </div>
-        <h3 class="text-base sm:text-lg font-semibold text-text-strong">No Question Banks Created</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-text-strong">
+          No Question Banks Created
+        </h3>
         <p class="text-xs sm:text-sm text-text-muted max-w-md mx-auto mt-1 mb-6">
-          Create question banks with single choice, multiple choice, true/false, or structured questions to use during hiring stages.
+          Create question banks with single choice, multiple choice, true/false, or structured
+          questions to use during hiring stages.
         </p>
         <router-link
           :to="`/organizations/${organizationId}/questions?create=true`"
@@ -107,7 +118,10 @@ onMounted(async () => {
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2 flex-wrap">
                   <h3 class="text-base font-bold text-text-strong">{{ b.name }}</h3>
-                  <span v-if="b.category" class="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-surface-raised border border-border text-text-muted">
+                  <span
+                    v-if="b.category"
+                    class="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-surface-raised border border-border text-text-muted"
+                  >
                     {{ b.category }}
                   </span>
                 </div>
@@ -118,7 +132,9 @@ onMounted(async () => {
               <ChevronRight class="h-5 w-5 text-text-subtle shrink-0 mt-0.5" />
             </div>
 
-            <div class="pt-3 border-t border-border flex items-center justify-between text-xs text-text-muted">
+            <div
+              class="pt-3 border-t border-border flex items-center justify-between text-xs text-text-muted"
+            >
               <span>{{ b.questions_count }} questions · {{ b.total_points }} pts</span>
               <span class="font-medium text-text-secondary">
                 {{ b.creator_name ? `By ${b.creator_name}` : '' }}

@@ -75,7 +75,7 @@ const primaryOrg = computed(() => {
 
           <router-link
             v-if="primaryOrg"
-            :to="`/organizations/${primaryOrg.id}`"
+            :to="`/organizations/${primaryOrg.slug || primaryOrg.id}`"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs sm:text-sm backdrop-blur-xs border border-white/20 transition"
           >
             <Building2 class="h-4 w-4" />
@@ -84,7 +84,7 @@ const primaryOrg = computed(() => {
 
           <router-link
             v-if="primaryOrg && (userRole === 'org_admin' || userRole === 'org_staff')"
-            :to="`/organizations/${primaryOrg.id}/jobs/create`"
+            :to="`/organizations/${primaryOrg.slug || primaryOrg.id}/jobs/create`"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs sm:text-sm backdrop-blur-xs border border-white/20 transition"
           >
             <PlusCircle class="h-4 w-4" />
@@ -170,7 +170,7 @@ const primaryOrg = computed(() => {
         <p class="text-xs dark:text-gray-400">
           <router-link
             v-if="primaryOrg"
-            :to="`/organizations/${primaryOrg.id}`"
+            :to="`/organizations/${primaryOrg.slug || primaryOrg.id}`"
             class="dark:text-indigo-400 font-semibold hover:underline inline-flex items-center gap-1"
           >
             Go to Company Workspace

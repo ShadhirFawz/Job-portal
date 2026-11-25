@@ -176,6 +176,13 @@ public class ApplicationService : IApplicationService
             });
     }
 
+    public async Task<Guid> GetApplicationIdBySlugAsync(string slug)
+    {
+        if (Guid.TryParse(slug, out var parsedGuid)) return parsedGuid;
+        var app = await _supabase.GetSingleAsync<JobApplication>($"job_applications?slug=eq.{Uri.EscapeDataString(slug)}&select=id");
+        return app?.Id ?? Guid.Empty;
+    }
+
     private static JobApplicationDto MapToDto(JobApplication a)
     {
         return new JobApplicationDto
@@ -214,7 +221,8 @@ public class ApplicationService : IApplicationService
                 FilePath = a.Resume.FilePath,
                 FileSize = a.Resume.FileSize,
                 FileType = a.Resume.FileType
-            } : null
+            } : null,
+            Slug = a.Slug,
         };
     }
 }

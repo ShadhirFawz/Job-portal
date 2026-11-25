@@ -30,7 +30,7 @@ const router = useRouter()
 const auth = useAuthStore()
 const jobsStore = useJobsStore()
 
-const jobId = route.params.id as string
+const jobId = route.params.slug as string
 
 const loading = ref(true)
 const submitting = ref(false)
@@ -56,7 +56,9 @@ function formatFileSize(bytes: number | null | undefined): string {
 const job = computed(() => jobsStore.currentJob)
 
 const quizProcess = computed(() => {
-  return job.value?.selection_processes?.find(p => p.process_type && p.process_type.includes('quiz'))
+  return job.value?.selection_processes?.find(
+    (p) => p.process_type && p.process_type.includes('quiz'),
+  )
 })
 
 // Status & deadline checks
@@ -104,11 +106,11 @@ onMounted(async () => {
       if (applied) {
         existingApplication.value = await applicationService.fetchUserApplication(
           jobId,
-          auth.user.id
+          auth.user.id,
         )
         if (existingApplication.value?.resume_id) {
           appliedResume.value = await resumeService.fetchResumeById(
-            existingApplication.value.resume_id
+            existingApplication.value.resume_id,
           )
         }
       } else {
@@ -169,15 +171,16 @@ async function handleApply() {
     successMsg.value = 'Your application has been submitted successfully!'
 
     if (jobsStore.currentJob) {
-      jobsStore.currentJob.applications_count =
-        (jobsStore.currentJob.applications_count || 0) + 1
+      jobsStore.currentJob.applications_count = (jobsStore.currentJob.applications_count || 0) + 1
     }
 
     const targetQuiz = quizProcess.value
     if (targetQuiz) {
       toast.success('Application submitted! Taking you to the Stage Assessment...')
       setTimeout(() => {
-        router.push(`/jobs/${jobId}/assessments/${targetQuiz.id}?appId=${newApp.id}`)
+        router.push(
+          `/jobs/${jobId}/assessments/${targetQuiz.slug || targetQuiz.id}?appId=${newApp.slug || newApp.id}`,
+        )
       }, 1500)
     } else {
       toast.success('Application submitted!')
@@ -269,7 +272,7 @@ async function handleApply() {
                 class="text-sm sm:text-lg md:text-xl lg:text-2xl font-bold text-text-strong mt-1 line-clamp-2 sm:truncate"
               >
                 {{ job.title }}
-              </h1>                
+              </h1>
               <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 sm:gap-2">
                 <span class="text-[10px] sm:text-xs text-text-subtle">•</span>
                 <span class="text-[10px] sm:text-xs text-text-muted capitalize">
@@ -307,8 +310,8 @@ async function handleApply() {
                       existingApplication
                         ? new Date(existingApplication.applied_at).toLocaleDateString()
                         : 'earlier'
-                    }}
-                  </span>.
+                    }} </span
+                  >.
                 </p>
                 <div class="mt-2 flex flex-wrap items-center gap-2">
                   <span class="text-[11px] sm:text-xs font-medium">Status:</span>
@@ -361,7 +364,11 @@ async function handleApply() {
               <button
                 v-if="quizProcess"
                 type="button"
-                @click="router.push(`/jobs/${jobId}/assessments/${quizProcess.id}?appId=${existingApplication?.id}`)"
+                @click="
+                  router.push(
+                    `/jobs/${jobId}/assessments/${quizProcess.slug || quizProcess.id}?appId=${existingApplication?.slug || existingApplication?.id}`,
+                  )
+                "
                 class="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 text-[11px] sm:text-xs font-semibold rounded-lg text-white bg-primary hover:bg-primary-hover shadow-xs transition"
               >
                 <span>Take Stage Assessment ({{ quizProcess.title || 'Quiz' }})</span>
@@ -432,7 +439,9 @@ async function handleApply() {
                   <Clock class="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary shrink-0" />
                   <span>Selection Pathway</span>
                 </h4>
-                <span class="text-[10px] sm:text-[11px] text-text-muted font-medium whitespace-nowrap">
+                <span
+                  class="text-[10px] sm:text-[11px] text-text-muted font-medium whitespace-nowrap"
+                >
                   {{ job.selection_processes.length }}
                   {{ job.selection_processes.length === 1 ? 'stage' : 'stages' }}
                 </span>
@@ -513,10 +522,7 @@ async function handleApply() {
                       <Mail class="h-3 w-3 text-text-subtle shrink-0" />
                       <span class="truncate">{{ auth.user?.email }}</span>
                     </span>
-                    <span
-                      v-if="auth.user?.city"
-                      class="inline-flex items-center gap-1 min-w-0"
-                    >
+                    <span v-if="auth.user?.city" class="inline-flex items-center gap-1 min-w-0">
                       <MapPin class="h-3 w-3 text-text-subtle shrink-0" />
                       <span class="truncate">{{ auth.user.city }}</span>
                     </span>

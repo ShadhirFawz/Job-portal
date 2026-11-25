@@ -70,10 +70,10 @@ export const applicationService = {
    * Update the status of an application via .NET backend API.
    */
   async updateApplicationStatus(
-    applicationId: string,
+    applicationSlug: string,
     status: ApplicationStatus
   ): Promise<void> {
-    await api.put<{ success: boolean }>(`applications/${applicationId}/status`, {
+    await api.put<{ success: boolean }>(`applications/${applicationSlug}/status`, {
       status,
     })
   },

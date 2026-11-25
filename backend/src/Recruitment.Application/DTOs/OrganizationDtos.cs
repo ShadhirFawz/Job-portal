@@ -10,6 +10,9 @@ public class OrganizationDto
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
+    [JsonPropertyName("slug")]
+    public string? Slug { get; set; }
+
     [JsonPropertyName("legal_name")]
     public string? LegalName { get; set; }
 
@@ -97,6 +100,9 @@ public class CreateOrganizationRequest
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
+    [JsonPropertyName("slug")]
+    public string? Slug { get; set; }
+
     [JsonPropertyName("legal_name")]
     public string? LegalName { get; set; }
 
@@ -165,6 +171,9 @@ public class UpdateOrganizationRequest
 {
     [JsonPropertyName("name")]
     public string? Name { get; set; }
+
+    [JsonPropertyName("slug")]
+    public string? Slug { get; set; }
 
     [JsonPropertyName("legal_name")]
     public string? LegalName { get; set; }

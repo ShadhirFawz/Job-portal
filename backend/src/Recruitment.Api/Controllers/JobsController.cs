@@ -22,66 +22,49 @@ public class JobsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetJob(Guid id, [FromQuery] bool publicOnly = false)
+    [HttpGet("{slug}")]
+    public async Task<IActionResult> GetJob(string slug, [FromQuery] bool publicOnly = false)
     {
-        var job = await _jobService.GetJobByIdAsync(id, publicOnly);
-        if (job == null)
-        {
-            return NotFound(new { message = "Job not found." });
-        }
+        var job = await _jobService.GetJobBySlugAsync(slug, publicOnly);
+        if (job == null) return NotFound(new { message = "Job not found." });
         return Ok(job);
     }
 
-    [HttpGet("organization/{organizationId:guid}")]
-    public async Task<IActionResult> GetOrganizationJobs(Guid organizationId)
+    [HttpGet("organization/{slug}")]
+    public async Task<IActionResult> GetOrganizationJobs(string slug)
     {
-        var list = await _jobService.GetOrganizationJobsAsync(organizationId);
+        var list = await _jobService.GetOrganizationJobsBySlugAsync(slug);
         return Ok(list);
     }
 
-    [HttpPut("{id:guid}")]
-    public async Task<IActionResult> UpdateJob(Guid id, [FromQuery] Guid userId, [FromBody] UpdateJobRequest request)
+    [HttpPut("{slug}")]
+    public async Task<IActionResult> UpdateJob(string slug, [FromQuery] Guid userId, [FromBody] UpdateJobRequest request)
     {
         try
         {
-            var updated = await _jobService.UpdateJobAsync(id, userId, request);
+            var jobId = await _jobService.GetJobIdBySlugAsync(slug);
+            if (jobId == Guid.Empty) return NotFound(new { message = "Job not found." });
+            var updated = await _jobService.UpdateJobAsync(jobId, userId, request);
             return Ok(updated);
         }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return StatusCode(403, new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
     }
 
-    [HttpPost("{id:guid}/publish")]
-    public async Task<IActionResult> PublishJob(Guid id, [FromQuery] Guid userId)
+    [HttpPost("{slug}/publish")]
+    public async Task<IActionResult> PublishJob(string slug, [FromQuery] Guid userId)
     {
         try
         {
-            var published = await _jobService.PublishJobAsync(id, userId);
+            var jobId = await _jobService.GetJobIdBySlugAsync(slug);
+            if (jobId == Guid.Empty) return NotFound(new { message = "Job not found." });
+            var published = await _jobService.PublishJobAsync(jobId, userId);
             return Ok(published);
         }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return StatusCode(403, new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
+        catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
     }
 }
 

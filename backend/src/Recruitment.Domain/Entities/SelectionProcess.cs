@@ -42,5 +42,8 @@ public class SelectionProcess
 
     [JsonPropertyName("updated_at")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    [JsonPropertyName("slug")]
+    public string? Slug { get; set; }
 }
 

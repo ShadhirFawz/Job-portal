@@ -14,6 +14,7 @@ export type SelectionProcessType =
 export interface SelectionProcess {
   id?: string
   job_id?: string
+  slug?: string | null
   title: string
   process_type: SelectionProcessType | string
   description?: string | null

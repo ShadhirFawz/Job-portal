@@ -46,6 +46,7 @@ export interface JobApplication {
   withdrawn_at?: string | null
   user?: JobApplicantUser
   resume?: JobApplicationResume | null
+  slug: string
 }
 
 export interface CreateApplicationInput {

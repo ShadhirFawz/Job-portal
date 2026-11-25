@@ -9,16 +9,20 @@ namespace Recruitment.Api.Controllers;
 public class QuestionBanksController : ControllerBase
 {
     private readonly IQuestionBankService _bankService;
+    private readonly IOrganizationService _organizationService;
 
-    public QuestionBanksController(IQuestionBankService bankService)
+    public QuestionBanksController(IQuestionBankService bankService, IOrganizationService organizationService)
     {
         _bankService = bankService;
+        _organizationService = organizationService;
     }
 
-    [HttpGet("organization/{organizationId:guid}")]
-    public async Task<IActionResult> GetOrganizationBanks(Guid organizationId)
+    [HttpGet("organization/{slug}")]
+    public async Task<IActionResult> GetOrganizationBanks(string slug)
     {
-        var banks = await _bankService.GetOrganizationBanksAsync(organizationId);
+        var org = await _organizationService.GetOrganizationAsync(slug);
+        if (org == null) return NotFound(new { message = "Organization not found." });
+        var banks = await _bankService.GetOrganizationBanksAsync(org.Id);
         return Ok(banks);
     }
 
@@ -32,13 +36,18 @@ public class QuestionBanksController : ControllerBase
 
     [HttpPost]
     public async Task<IActionResult> CreateBank(
-        [FromQuery] Guid organizationId,
+        [FromQuery] string? organization,
+        [FromQuery] string? organizationId,
         [FromQuery] Guid userId,
         [FromBody] CreateQuestionBankRequest request)
     {
         try
         {
-            var created = await _bankService.CreateBankAsync(organizationId, userId, request);
+            var orgKey = !string.IsNullOrWhiteSpace(organization) ? organization : organizationId;
+            if (string.IsNullOrWhiteSpace(orgKey)) return BadRequest(new { message = "Organization identifier is required." });
+            var org = await _organizationService.GetOrganizationAsync(orgKey);
+            if (org == null) return NotFound(new { message = "Organization not found." });
+            var created = await _bankService.CreateBankAsync(org.Id, userId, request);
             return CreatedAtAction(nameof(GetBank), new { id = created.Id }, created);
         }
         catch (Exception ex)

@@ -11,19 +11,19 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/organizations/:id',
+      path: '/organizations/:slug',
       name: 'organization-detail',
       component: () => import('@/views/organizations/OrganizationDetail.vue'),
       meta: { requiresAuth: true }
     },
     {
-      path: '/organizations/:id/edit',
+      path: '/organizations/:slug/edit',
       name: 'edit-organization',
       component: () => import('@/views/organizations/EditOrganization.vue'),
       meta: { requiresAuth: true }
     },
     {
-      path: '/organizations/:id/invite',
+      path: '/organizations/:slug/invite',
       name: 'invite-member',
       component: () => import('@/views/organizations/InviteMember.vue'),
       meta: { requiresAuth: true }
@@ -34,54 +34,58 @@ const router = createRouter({
       component: () => import('@/views/organizations/VerifyEmail.vue')
     },
     {
-      path: '/organizations/:orgId/jobs/create',
+      path: '/organizations/:slug/jobs/create',
       name: 'create-job',
       component: () => import('@/views/jobs/CreateJob.vue'),
       meta: { requiresAuth: true }
     },
     {
-      path: '/organizations/:orgId/questions',
+      path: '/organizations/:slug/questions',
       name: 'question-bank',
       component: () => import('@/views/assessments/QuestionBank.vue'),
       meta: { requiresAuth: true }
     },
     {
-      path: '/organizations/:orgId/quizzes/create',
+      path: '/organizations/:slug/quizzes/create',
       name: 'create-quiz',
       component: () => import('@/views/assessments/QuizBuilder.vue'),
       meta: { requiresAuth: true }
     },
     {
-      path: '/organizations/:orgId/assessments',
+      path: '/organizations/:slug/assessments',
       name: 'assessments-home',
       component: () => import('@/views/assessments/AssessmentsHome.vue'),
       meta: { requiresAuth: true }
     },
     {
-      path: '/jobs/:id',
+      path: '/jobs/:slug',
       name: 'job-detail',
       component: () => import('@/views/jobs/JobDetail.vue')
     },
     {
-      path: '/jobs/:id/edit',
+      path: '/jobs/:slug/edit',
       name: 'edit-job',
       component: () => import('@/views/jobs/EditJob.vue'),
       meta: { requiresAuth: true }
     },
     {
-      path: '/jobs/:id/apply',
+      path: '/jobs/:slug/apply',
       name: 'apply-job',
       component: () => import('@/views/jobs/ApplyJob.vue'),
       meta: { requiresAuth: true }
     },
     {
-      path: '/jobs/:jobId/assessments/:processId',
+      path: '/jobs/:slug/assessments/:processSlug',
       name: 'take-quiz',
       component: () => import('@/views/assessments/TakeQuiz.vue'),
       meta: { requiresAuth: true, hideNavbar: true }
     },
     {
-      path: '/jobs/:id/applications',
+      path: '/jobs/:jobId/assessments/:processId',
+      redirect: to => `/jobs/${to.params.jobId}/assessments/${to.params.processId}`
+    },
+    {
+      path: '/jobs/:slug/applications',
       name: 'job-applications',
       component: () => import('@/views/jobs/JobApplications.vue'),
       meta: { requiresAuth: true }

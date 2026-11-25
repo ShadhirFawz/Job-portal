@@ -9,10 +9,12 @@ namespace Recruitment.Api.Controllers;
 public class ApplicationsController : ControllerBase
 {
     private readonly IApplicationService _applicationService;
+    private readonly IJobService _jobService;
 
-    public ApplicationsController(IApplicationService applicationService)
+    public ApplicationsController(IApplicationService applicationService, IJobService jobService)
     {
         _applicationService = applicationService;
+        _jobService = jobService;
     }
 
     [HttpGet("check")]
@@ -47,25 +49,21 @@ public class ApplicationsController : ControllerBase
         }
     }
 
-    [HttpGet("job/{jobId:guid}")]
-    public async Task<IActionResult> FetchApplicationsForJob(Guid jobId)
+    [HttpGet("job/{slug}")]
+    public async Task<IActionResult> FetchApplicationsForJob(string slug)
     {
+        var jobId = await _jobService.GetJobIdBySlugAsync(slug);
         var list = await _applicationService.FetchApplicationsForJobAsync(jobId);
         return Ok(list);
     }
 
-    [HttpPut("{id:guid}/status")]
-    public async Task<IActionResult> UpdateApplicationStatus(Guid id, [FromBody] UpdateApplicationStatusRequest request)
+    [HttpPut("{slug}/status")]
+    public async Task<IActionResult> UpdateApplicationStatus(string slug, [FromBody] UpdateApplicationStatusRequest request)
     {
-        try
-        {
-            await _applicationService.UpdateApplicationStatusAsync(id, request.Status);
-            return Ok(new { success = true });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var applicationId = await _applicationService.GetApplicationIdBySlugAsync(slug);
+        if (applicationId == Guid.Empty) return NotFound(new { message = "Application not found." });
+        await _applicationService.UpdateApplicationStatusAsync(applicationId, request.Status);
+        return Ok(new { success = true });
     }
 }
 

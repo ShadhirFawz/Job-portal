@@ -40,6 +40,9 @@ public class JobApplication
     [JsonPropertyName("withdrawn_at")]
     public DateTime? WithdrawnAt { get; set; }
 
+    [JsonPropertyName("slug")]
+    public string? Slug { get; set; }
+
     // Joined relations
     [JsonPropertyName("user")]
     public UserProfile? User { get; set; }

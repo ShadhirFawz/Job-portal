@@ -9,16 +9,20 @@ namespace Recruitment.Api.Controllers;
 public class MembersController : ControllerBase
 {
     private readonly IMemberService _memberService;
+    private readonly IOrganizationService _organizationService;
 
-    public MembersController(IMemberService memberService)
+    public MembersController(IMemberService memberService, IOrganizationService organizationService)
     {
         _memberService = memberService;
+        _organizationService = organizationService;
     }
 
-    [HttpGet("organization/{organizationId:guid}")]
-    public async Task<IActionResult> FetchMembers(Guid organizationId)
+    [HttpGet("organization/{slug}")]
+    public async Task<IActionResult> FetchMembers(string slug)
     {
-        var members = await _memberService.FetchMembersAsync(organizationId);
+        var org = await _organizationService.GetOrganizationAsync(slug);
+        if (org == null) return NotFound(new { message = "Organization not found." });
+        var members = await _memberService.FetchMembersAsync(org.Id);
         return Ok(members);
     }
 

@@ -48,7 +48,7 @@ const router = useRouter()
 const auth = useAuthStore()
 const jobsStore = useJobsStore()
 
-const jobId = route.params.id as string
+const jobId = route.params.slug as string
 
 const loading = ref(true)
 const authorized = ref(false)
@@ -77,7 +77,10 @@ const attemptsByAppId = computed(() => {
     const existing = map.get(key)
     if (!existing) {
       map.set(key, a)
-    } else if (existing.status !== 'graded' && (a.status === 'graded' || a.status === 'submitted')) {
+    } else if (
+      existing.status !== 'graded' &&
+      (a.status === 'graded' || a.status === 'submitted')
+    ) {
       map.set(key, a)
     }
   }
@@ -92,7 +95,10 @@ const attemptsByUserId = computed(() => {
     const existing = map.get(key)
     if (!existing) {
       map.set(key, a)
-    } else if (existing.status !== 'graded' && (a.status === 'graded' || a.status === 'submitted')) {
+    } else if (
+      existing.status !== 'graded' &&
+      (a.status === 'graded' || a.status === 'submitted')
+    ) {
       map.set(key, a)
     }
   }
@@ -102,8 +108,10 @@ const attemptsByUserId = computed(() => {
 function getQuizAttempt(app: JobApplication): QuizAttempt | undefined {
   const appId = (app.id || '').toLowerCase().trim()
   const candidateUserId = (app.user_id || app.user?.id || '').toLowerCase().trim()
-  return (appId ? attemptsByAppId.value.get(appId) : undefined) ||
-         (candidateUserId ? attemptsByUserId.value.get(candidateUserId) : undefined)
+  return (
+    (appId ? attemptsByAppId.value.get(appId) : undefined) ||
+    (candidateUserId ? attemptsByUserId.value.get(candidateUserId) : undefined)
+  )
 }
 
 const job = computed(() => jobsStore.currentJob)
@@ -142,7 +150,7 @@ onMounted(async () => {
       jobsStore.currentJob.organization_id,
       auth.user.id,
       auth.user.role,
-      jobsStore.currentJob.created_by
+      jobsStore.currentJob.created_by,
     )
 
     if (!isAllowed) {
@@ -154,11 +162,7 @@ onMounted(async () => {
     authorized.value = true
 
     // 3. Fetch applications, quiz attempts, and job selection processes
-    await Promise.all([
-      loadApplications(),
-      loadQuizAttempts(),
-      loadJobProcesses()
-    ])
+    await Promise.all([loadApplications(), loadQuizAttempts(), loadJobProcesses()])
   } catch (err: any) {
     console.error('Error loading applications:', err)
     toast.error(err.message || 'Failed to load applications')
@@ -169,18 +173,20 @@ onMounted(async () => {
 
 async function loadJobProcesses() {
   try {
+    const actualJobId = job.value?.id || jobsStore.currentJob?.id || jobId
     const { data: processes } = await supabase
       .from('job_selection_processes')
       .select('id, title, process_type, config, question_bank_id')
-      .eq('job_id', jobId)
+      .eq('job_id', actualJobId)
 
     if (processes && processes.length > 0) {
-      const quizProc = processes.find((p: any) =>
-        p.process_type === 'quiz' ||
-        p.process_type === 'screening_quiz' ||
-        p.process_type === 'quiz_coding' ||
-        p.question_bank_id ||
-        p.config?.question_bank_id
+      const quizProc = processes.find(
+        (p: any) =>
+          p.process_type === 'quiz' ||
+          p.process_type === 'screening_quiz' ||
+          p.process_type === 'quiz_coding' ||
+          p.question_bank_id ||
+          p.config?.question_bank_id,
       )
       if (quizProc) {
         hasQuizStage.value = true
@@ -204,8 +210,13 @@ async function loadQuizAttempts() {
   if (!auth.user) return
   loadingQuizAttempts.value = true
   try {
-    quizAttempts.value = await assessmentService.getJobAttempts(jobId, auth.user.id)
-    console.log('[JobApplications] Loaded quiz attempts:', quizAttempts.value.length, quizAttempts.value)
+    const actualJobId = job.value?.id || jobsStore.currentJob?.id || jobId
+    quizAttempts.value = await assessmentService.getJobAttempts(actualJobId, auth.user.id)
+    console.log(
+      '[JobApplications] Loaded quiz attempts:',
+      quizAttempts.value.length,
+      quizAttempts.value,
+    )
   } catch (err) {
     console.error('Failed to load quiz attempts for job:', err)
   } finally {
@@ -264,7 +275,7 @@ function formatAttemptDate(dateStr?: string | null): string {
       day: 'numeric',
       year: 'numeric',
       hour: 'numeric',
-      minute: '2-digit'
+      minute: '2-digit',
     })
   } catch {
     return dateStr
@@ -274,7 +285,7 @@ function formatAttemptDate(dateStr?: string | null): string {
 function isCandidateSelected(answer: any, optId: string): boolean {
   if (answer === undefined || answer === null) return false
   if (Array.isArray(answer)) {
-    return answer.some(v => String(v).trim().toLowerCase() === optId.toLowerCase())
+    return answer.some((v) => String(v).trim().toLowerCase() === optId.toLowerCase())
   }
   return String(answer).trim().toLowerCase() === optId.toLowerCase()
 }
@@ -293,7 +304,8 @@ const filteredApplications = computed(() => {
   if (query) {
     list = list.filter((a) => {
       const u = a.user
-      const name = `${u?.first_name || ''} ${u?.last_name || ''} ${u?.display_name || ''}`.toLowerCase()
+      const name =
+        `${u?.first_name || ''} ${u?.last_name || ''} ${u?.display_name || ''}`.toLowerCase()
       const email = (u?.email || '').toLowerCase()
       const headline = (u?.headline || u?.current_job_title || '').toLowerCase()
       return name.includes(query) || email.includes(query) || headline.includes(query)
@@ -312,13 +324,10 @@ const statusCounts = computed(() => {
   return counts
 })
 
-async function handleUpdateStatus(
-  application: JobApplication,
-  newStatus: ApplicationStatus
-) {
+async function handleUpdateStatus(application: JobApplication, newStatus: ApplicationStatus) {
   actionLoading.value = application.id
   try {
-    await applicationService.updateApplicationStatus(application.id, newStatus)
+    await applicationService.updateApplicationStatus(application.slug, newStatus)
     application.status = newStatus
     toast.success(`Application updated to "${newStatus.replace('_', ' ')}"`)
   } catch (err: any) {
@@ -389,7 +398,6 @@ async function handleDownloadResume(app: JobApplication) {
 <template>
   <div class="min-h-screen bg-page py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
     <div class="max-w-6xl mx-auto space-y-6">
-      
       <!-- Back Navigation & Organization Link -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <button
@@ -402,7 +410,7 @@ async function handleDownloadResume(app: JobApplication) {
 
         <router-link
           v-if="job?.organization_id"
-          :to="`/organizations/${job.organization_id}`"
+          :to="`/organizations/${job.organization?.slug || job.organization_id}`"
           class="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 self-start sm:self-auto"
         >
           {{ job.organization?.name || 'Organization' }} Dashboard
@@ -411,8 +419,13 @@ async function handleDownloadResume(app: JobApplication) {
       </div>
 
       <!-- Loading State -->
-      <div v-if="loading" class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-12 sm:p-16 text-center">
-        <div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-3"></div>
+      <div
+        v-if="loading"
+        class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-12 sm:p-16 text-center"
+      >
+        <div
+          class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-3"
+        ></div>
         <p class="text-xs sm:text-sm text-text-muted">Loading job applications...</p>
       </div>
 
@@ -421,7 +434,9 @@ async function handleDownloadResume(app: JobApplication) {
         v-else-if="!authorized"
         class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-danger-border p-8 sm:p-12 text-center space-y-4"
       >
-        <div class="h-12 w-12 rounded-full bg-danger-bg text-danger flex items-center justify-center mx-auto">
+        <div
+          class="h-12 w-12 rounded-full bg-danger-bg text-danger flex items-center justify-center mx-auto"
+        >
           <ShieldAlert class="h-6 w-6" />
         </div>
         <h2 class="text-lg sm:text-xl font-bold text-text-strong">Access Restricted</h2>
@@ -439,16 +454,21 @@ async function handleDownloadResume(app: JobApplication) {
 
       <!-- Main Content -->
       <div v-else class="space-y-6">
-        
         <!-- Top Job Summary Card -->
-        <div class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-4 sm:p-6 lg:p-8">
+        <div
+          class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-4 sm:p-6 lg:p-8"
+        >
           <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
             <div class="space-y-1.5 min-w-0">
-              <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-primary">
+              <div
+                class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-primary"
+              >
                 <Briefcase class="h-3.5 w-3.5 flex-shrink-0" />
                 <span>Candidate Pipeline</span>
               </div>
-              <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-text-strong tracking-tight truncate">
+              <h1
+                class="text-xl sm:text-2xl lg:text-3xl font-bold text-text-strong tracking-tight truncate"
+              >
                 {{ job?.title }}
               </h1>
               <p class="text-xs sm:text-sm text-text-secondary flex flex-wrap items-center gap-1.5">
@@ -462,20 +482,29 @@ async function handleDownloadResume(app: JobApplication) {
 
             <!-- Stats Badge -->
             <div class="flex items-center self-start lg:self-auto">
-              <div class="bg-primary-light border border-primary/30 rounded-xl px-4 py-3 text-center min-w-[120px]">
+              <div
+                class="bg-primary-light border border-primary/30 rounded-xl px-4 py-3 text-center min-w-[120px]"
+              >
                 <span class="block text-xl sm:text-2xl font-bold text-primary">
                   {{ applications.length }}
                 </span>
-                <span class="text-[11px] sm:text-xs font-semibold text-primary uppercase tracking-wide">Total Applicants</span>
+                <span
+                  class="text-[11px] sm:text-xs font-semibold text-primary uppercase tracking-wide"
+                  >Total Applicants</span
+                >
               </div>
             </div>
           </div>
 
           <!-- Search & Filter Controls -->
-          <div class="mt-6 pt-5 border-t border-border flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          <div
+            class="mt-6 pt-5 border-t border-border flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4"
+          >
             <!-- Search bar (constrained and responsive) -->
             <div class="relative w-full lg:w-76 flex-shrink-0">
-              <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-subtle pointer-events-none" />
+              <Search
+                class="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-text-subtle pointer-events-none"
+              />
               <input
                 v-model="searchQuery"
                 type="text"
@@ -485,7 +514,9 @@ async function handleDownloadResume(app: JobApplication) {
             </div>
 
             <!-- Status Tabs (Horizontal Scrollable Layout) -->
-            <div class="w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div
+              class="w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
               <div class="flex items-center gap-1.5 min-w-max">
                 <button
                   v-for="tab in filterTabs"
@@ -517,12 +548,19 @@ async function handleDownloadResume(app: JobApplication) {
         </div>
 
         <!-- Applications List Empty State -->
-        <div v-if="filteredApplications.length === 0" class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-10 sm:p-12 text-center space-y-3">
+        <div
+          v-if="filteredApplications.length === 0"
+          class="bg-card rounded-xl sm:rounded-2xl shadow-sm border border-border p-10 sm:p-12 text-center space-y-3"
+        >
           <User class="h-10 w-10 text-text-subtle mx-auto" />
           <h3 class="text-sm sm:text-base font-bold text-text-strong">No Applications Found</h3>
           <p class="text-xs text-text-muted max-w-sm mx-auto leading-relaxed">
-            <span v-if="searchQuery">No applicants match your search query "{{ searchQuery }}".</span>
-            <span v-else-if="statusFilter !== 'all'">No candidates found in the "{{ statusFilter.replace('_', ' ') }}" stage.</span>
+            <span v-if="searchQuery"
+              >No applicants match your search query "{{ searchQuery }}".</span
+            >
+            <span v-else-if="statusFilter !== 'all'"
+              >No candidates found in the "{{ statusFilter.replace('_', ' ') }}" stage.</span
+            >
             <span v-else>No candidates have applied to this job yet.</span>
           </p>
         </div>
@@ -538,7 +576,9 @@ async function handleDownloadResume(app: JobApplication) {
             <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
               <div class="flex items-start gap-3.5 sm:gap-4 min-w-0">
                 <!-- Avatar -->
-                <div class="h-11 w-11 sm:h-12 sm:w-12 rounded-full bg-primary text-white font-bold text-base sm:text-lg flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm">
+                <div
+                  class="h-11 w-11 sm:h-12 sm:w-12 rounded-full bg-primary text-white font-bold text-base sm:text-lg flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm"
+                >
                   <img
                     v-if="app.user?.avatar_path"
                     :src="getProfileImageUrl(app.user.avatar_path) || ''"
@@ -560,14 +600,22 @@ async function handleDownloadResume(app: JobApplication) {
                     </span>
                   </div>
 
-                  <p v-if="app.user?.headline || app.user?.current_job_title" class="text-xs text-text-secondary font-medium mt-0.5 truncate">
+                  <p
+                    v-if="app.user?.headline || app.user?.current_job_title"
+                    class="text-xs text-text-secondary font-medium mt-0.5 truncate"
+                  >
                     {{ app.user.headline || app.user.current_job_title }}
                   </p>
 
-                  <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-muted">
+                  <div
+                    class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-muted"
+                  >
                     <span class="inline-flex items-center gap-1 truncate">
                       <Mail class="h-3 w-3 text-text-subtle flex-shrink-0" />
-                      <a :href="`mailto:${app.user?.email}`" class="hover:text-primary hover:underline truncate">
+                      <a
+                        :href="`mailto:${app.user?.email}`"
+                        class="hover:text-primary hover:underline truncate"
+                      >
                         {{ app.user?.email }}
                       </a>
                     </span>
@@ -586,7 +634,9 @@ async function handleDownloadResume(app: JobApplication) {
               </div>
 
               <!-- Status Badge & Controls -->
-              <div class="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-3 pt-2 lg:pt-0 border-t lg:border-t-0 border-border">
+              <div
+                class="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-3 pt-2 lg:pt-0 border-t lg:border-t-0 border-border"
+              >
                 <span
                   class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold uppercase tracking-wider border"
                   :class="{
@@ -667,7 +717,11 @@ async function handleDownloadResume(app: JobApplication) {
 
             <!-- Quiz Assessment Results Card -->
             <div
-              v-if="getQuizAttempt(app) || (app.score !== null && app.score !== undefined) || hasQuizStage"
+              v-if="
+                getQuizAttempt(app) ||
+                (app.score !== null && app.score !== undefined) ||
+                hasQuizStage
+              "
               class="pt-3 border-t border-border"
             >
               <!-- 1. Candidate Has Attended the Quiz -->
@@ -677,8 +731,11 @@ async function handleDownloadResume(app: JobApplication) {
                 :class="{
                   'bg-success-bg/25 border-success-border/60': getQuizAttempt(app)?.passed === true,
                   'bg-danger-bg/25 border-danger-border/60': getQuizAttempt(app)?.passed === false,
-                  'bg-warning-bg/25 border-warning-border/60': getQuizAttempt(app)?.status === 'submitted',
-                  'bg-surface-raised/60 border-border': getQuizAttempt(app)?.status === 'in_progress' || getQuizAttempt(app)?.passed === null,
+                  'bg-warning-bg/25 border-warning-border/60':
+                    getQuizAttempt(app)?.status === 'submitted',
+                  'bg-surface-raised/60 border-border':
+                    getQuizAttempt(app)?.status === 'in_progress' ||
+                    getQuizAttempt(app)?.passed === null,
                 }"
               >
                 <div class="flex items-center gap-3 min-w-0">
@@ -688,7 +745,9 @@ async function handleDownloadResume(app: JobApplication) {
                       'bg-success-bg text-success': getQuizAttempt(app)?.passed === true,
                       'bg-danger-bg text-danger': getQuizAttempt(app)?.passed === false,
                       'bg-warning-bg text-warning': getQuizAttempt(app)?.status === 'submitted',
-                      'bg-primary-light text-primary': getQuizAttempt(app)?.status === 'in_progress' || getQuizAttempt(app)?.passed === null,
+                      'bg-primary-light text-primary':
+                        getQuizAttempt(app)?.status === 'in_progress' ||
+                        getQuizAttempt(app)?.passed === null,
                     }"
                   >
                     <Award class="h-4 w-4" />
@@ -703,7 +762,11 @@ async function handleDownloadResume(app: JobApplication) {
                       <span
                         v-if="getQuizAttempt(app)?.status === 'graded'"
                         class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                        :class="getQuizAttempt(app)?.passed ? 'bg-success text-white' : 'bg-danger text-white'"
+                        :class="
+                          getQuizAttempt(app)?.passed
+                            ? 'bg-success text-white'
+                            : 'bg-danger text-white'
+                        "
                       >
                         <CheckCircle2 v-if="getQuizAttempt(app)?.passed" class="h-3 w-3" />
                         <XCircle v-else class="h-3 w-3" />
@@ -725,14 +788,23 @@ async function handleDownloadResume(app: JobApplication) {
                       </span>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-muted mt-0.5">
+                    <div
+                      class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-text-muted mt-0.5"
+                    >
                       <span
                         class="font-semibold"
-                        :class="getQuizAttempt(app)?.passed ? 'text-success' : (getQuizAttempt(app)?.passed === false ? 'text-danger' : 'text-text-strong')"
+                        :class="
+                          getQuizAttempt(app)?.passed
+                            ? 'text-success'
+                            : getQuizAttempt(app)?.passed === false
+                              ? 'text-danger'
+                              : 'text-text-strong'
+                        "
                       >
                         Score: {{ getQuizAttempt(app)?.percentage ?? app.score ?? 0 }}%
                         <span v-if="getQuizAttempt(app)?.max_score">
-                          ({{ getQuizAttempt(app)?.score }} / {{ getQuizAttempt(app)?.max_score }} pts)
+                          ({{ getQuizAttempt(app)?.score }} /
+                          {{ getQuizAttempt(app)?.max_score }} pts)
                         </span>
                       </span>
                       <span v-if="getQuizAttempt(app)?.passing_score">•</span>
@@ -752,11 +824,13 @@ async function handleDownloadResume(app: JobApplication) {
                   type="button"
                   @click="openQuizResults(app)"
                   class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition shrink-0 shadow-xs cursor-pointer"
-                  :class="getQuizAttempt(app)?.passed
-                    ? 'bg-success-bg text-success hover:bg-success hover:text-white border border-success-border'
-                    : (getQuizAttempt(app)?.passed === false
-                      ? 'bg-danger-bg text-danger hover:bg-danger hover:text-white border border-danger-border'
-                      : 'bg-primary-light text-primary hover:bg-primary hover:text-white border border-primary/30')"
+                  :class="
+                    getQuizAttempt(app)?.passed
+                      ? 'bg-success-bg text-success hover:bg-success hover:text-white border border-success-border'
+                      : getQuizAttempt(app)?.passed === false
+                        ? 'bg-danger-bg text-danger hover:bg-danger hover:text-white border border-danger-border'
+                        : 'bg-primary-light text-primary hover:bg-primary hover:text-white border border-primary/30'
+                  "
                 >
                   <Eye class="h-3.5 w-3.5" />
                   <span>View Quiz Results</span>
@@ -769,7 +843,9 @@ async function handleDownloadResume(app: JobApplication) {
                 class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-border bg-surface-raised/50"
               >
                 <div class="flex items-center gap-3 min-w-0">
-                  <div class="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0">
+                  <div
+                    class="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0"
+                  >
                     <Award class="h-4 w-4" />
                   </div>
                   <div class="min-w-0">
@@ -797,7 +873,9 @@ async function handleDownloadResume(app: JobApplication) {
                 class="flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-surface-raised/30"
               >
                 <div class="flex items-center gap-3 min-w-0">
-                  <div class="h-8 w-8 rounded-lg bg-surface flex items-center justify-center shrink-0 text-text-subtle border border-border">
+                  <div
+                    class="h-8 w-8 rounded-lg bg-surface flex items-center justify-center shrink-0 text-text-subtle border border-border"
+                  >
                     <Award class="h-3.5 w-3.5" />
                   </div>
                   <div class="min-w-0">
@@ -805,7 +883,9 @@ async function handleDownloadResume(app: JobApplication) {
                       <span class="text-xs font-bold text-text-secondary truncate">
                         {{ quizStageTitle }}
                       </span>
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-surface text-text-muted border border-border">
+                      <span
+                        class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-surface text-text-muted border border-border"
+                      >
                         Not Attempted Yet
                       </span>
                     </div>
@@ -858,7 +938,9 @@ async function handleDownloadResume(app: JobApplication) {
             <!-- Cover Letter Section (Collapsible) -->
             <div v-if="app.cover_letter" class="pt-3 border-t border-border">
               <div class="flex items-center justify-between">
-                <span class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-text-muted">
+                <span
+                  class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-text-muted"
+                >
                   Cover Letter
                 </span>
                 <button
@@ -885,7 +967,9 @@ async function handleDownloadResume(app: JobApplication) {
               v-if="app.custom_answers && Object.keys(app.custom_answers).length > 0"
               class="pt-3 border-t border-border space-y-2"
             >
-              <span class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-text-muted">
+              <span
+                class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-text-muted"
+              >
                 Custom Answers
               </span>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -901,7 +985,6 @@ async function handleDownloadResume(app: JobApplication) {
             </div>
           </div>
         </div>
-
       </div>
     </div>
 
@@ -916,17 +999,23 @@ async function handleDownloadResume(app: JobApplication) {
           class="bg-card w-full max-w-3xl rounded-2xl border border-border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] my-auto animate-in fade-in zoom-in-95 duration-150"
         >
           <!-- Modal Header -->
-          <div class="px-5 sm:px-6 py-4 border-b border-border bg-surface flex items-start justify-between gap-4">
+          <div
+            class="px-5 sm:px-6 py-4 border-b border-border bg-surface flex items-start justify-between gap-4"
+          >
             <div class="space-y-1 min-w-0">
               <div class="flex items-center gap-2">
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider bg-primary-light text-primary border border-primary/20">
+                <span
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider bg-primary-light text-primary border border-primary/20"
+                >
                   <Award class="h-3 w-3" />
                   <span>{{ selectedQuizAttempt?.stage_title || 'Quiz Assessment Results' }}</span>
                 </span>
                 <span
                   v-if="selectedQuizAttempt?.status === 'graded'"
                   class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                  :class="selectedQuizAttempt?.passed ? 'bg-success text-white' : 'bg-danger text-white'"
+                  :class="
+                    selectedQuizAttempt?.passed ? 'bg-success text-white' : 'bg-danger text-white'
+                  "
                 >
                   <CheckCircle2 v-if="selectedQuizAttempt?.passed" class="h-3 w-3" />
                   <XCircle v-else class="h-3 w-3" />
@@ -935,10 +1024,16 @@ async function handleDownloadResume(app: JobApplication) {
               </div>
 
               <h2 class="text-base sm:text-lg font-bold text-text-strong truncate">
-                Candidate: {{ selectedQuizAttempt?.candidate_name || getApplicantName(selectedApplicationForQuiz?.user) }}
+                Candidate:
+                {{
+                  selectedQuizAttempt?.candidate_name ||
+                  getApplicantName(selectedApplicationForQuiz?.user)
+                }}
               </h2>
               <p class="text-xs text-text-muted truncate">
-                {{ selectedQuizAttempt?.candidate_email || selectedApplicationForQuiz?.user?.email }}
+                {{
+                  selectedQuizAttempt?.candidate_email || selectedApplicationForQuiz?.user?.email
+                }}
                 <span v-if="job?.title">• {{ job.title }}</span>
               </p>
             </div>
@@ -958,7 +1053,9 @@ async function handleDownloadResume(app: JobApplication) {
             <!-- Loading Details Indicator -->
             <div v-if="loadingQuizDetail" class="py-12 text-center space-y-3">
               <Loader2 class="h-8 w-8 animate-spin text-primary mx-auto" />
-              <p class="text-xs sm:text-sm text-text-muted">Loading candidate answers and evaluation breakdown...</p>
+              <p class="text-xs sm:text-sm text-text-muted">
+                Loading candidate answers and evaluation breakdown...
+              </p>
             </div>
 
             <!-- Quiz Attempt Content -->
@@ -969,7 +1066,8 @@ async function handleDownloadResume(app: JobApplication) {
                 :class="{
                   'bg-success-bg/30 border-success-border': selectedQuizAttempt.passed === true,
                   'bg-danger-bg/30 border-danger-border': selectedQuizAttempt.passed === false,
-                  'bg-surface-raised border-border': selectedQuizAttempt.passed === null || selectedQuizAttempt.passed === undefined
+                  'bg-surface-raised border-border':
+                    selectedQuizAttempt.passed === null || selectedQuizAttempt.passed === undefined,
                 }"
               >
                 <!-- Left: Big percentage & Status -->
@@ -979,7 +1077,9 @@ async function handleDownloadResume(app: JobApplication) {
                     :class="{
                       'bg-success text-white border-success': selectedQuizAttempt.passed === true,
                       'bg-danger text-white border-danger': selectedQuizAttempt.passed === false,
-                      'bg-primary text-white border-primary': selectedQuizAttempt.passed === null || selectedQuizAttempt.passed === undefined
+                      'bg-primary text-white border-primary':
+                        selectedQuizAttempt.passed === null ||
+                        selectedQuizAttempt.passed === undefined,
                     }"
                   >
                     <span>{{ selectedQuizAttempt.percentage }}%</span>
@@ -987,12 +1087,22 @@ async function handleDownloadResume(app: JobApplication) {
 
                   <div>
                     <h3 class="text-base font-bold text-text-strong">
-                      {{ selectedQuizAttempt.passed ? 'Assessment Passed' : (selectedQuizAttempt.passed === false ? 'Assessment Failed' : 'Assessment Completed') }}
+                      {{
+                        selectedQuizAttempt.passed
+                          ? 'Assessment Passed'
+                          : selectedQuizAttempt.passed === false
+                            ? 'Assessment Failed'
+                            : 'Assessment Completed'
+                      }}
                     </h3>
                     <p class="text-xs text-text-secondary mt-0.5">
-                      Earned {{ selectedQuizAttempt.score }} of {{ selectedQuizAttempt.max_score }} total points
+                      Earned {{ selectedQuizAttempt.score }} of
+                      {{ selectedQuizAttempt.max_score }} total points
                     </p>
-                    <p v-if="selectedQuizAttempt.passing_score" class="text-[11px] text-text-muted mt-0.5">
+                    <p
+                      v-if="selectedQuizAttempt.passing_score"
+                      class="text-[11px] text-text-muted mt-0.5"
+                    >
                       Passing Requirement: {{ selectedQuizAttempt.passing_score }}%
                     </p>
                   </div>
@@ -1000,7 +1110,10 @@ async function handleDownloadResume(app: JobApplication) {
 
                 <!-- Right: Submission metadata -->
                 <div class="text-xs text-text-muted text-center sm:text-right space-y-1">
-                  <div v-if="selectedQuizAttempt.submitted_at" class="flex items-center sm:justify-end gap-1.5">
+                  <div
+                    v-if="selectedQuizAttempt.submitted_at"
+                    class="flex items-center sm:justify-end gap-1.5"
+                  >
                     <Clock class="h-3.5 w-3.5 text-text-subtle" />
                     <span>Submitted {{ formatAttemptDate(selectedQuizAttempt.submitted_at) }}</span>
                   </div>
@@ -1015,7 +1128,9 @@ async function handleDownloadResume(app: JobApplication) {
                 <div class="flex items-center justify-between border-b border-border pb-2">
                   <h4 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-text-muted">
                     Questions & Responses Breakdown
-                    <span v-if="selectedQuizAttempt.answers">({{ selectedQuizAttempt.answers.length }})</span>
+                    <span v-if="selectedQuizAttempt.answers"
+                      >({{ selectedQuizAttempt.answers.length }})</span
+                    >
                   </h4>
                   <span class="text-xs text-text-subtle">Graded Assessment</span>
                 </div>
@@ -1039,7 +1154,9 @@ async function handleDownloadResume(app: JobApplication) {
                     <div class="flex flex-wrap items-center justify-between gap-2">
                       <div class="flex items-center gap-2">
                         <span class="text-xs font-bold text-text-muted">#{{ index + 1 }}</span>
-                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-surface-raised text-text-secondary border border-border">
+                        <span
+                          class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-surface-raised text-text-secondary border border-border"
+                        >
                           {{ formatQuestionType(ans.question_type) }}
                         </span>
                       </div>
@@ -1048,9 +1165,12 @@ async function handleDownloadResume(app: JobApplication) {
                       <span
                         class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold"
                         :class="{
-                          'bg-success-bg text-success border border-success-border': ans.is_correct === true,
-                          'bg-danger-bg text-danger border border-danger-border': ans.is_correct === false,
-                          'bg-warning-bg text-warning border border-warning-border': ans.is_correct === null || ans.is_correct === undefined
+                          'bg-success-bg text-success border border-success-border':
+                            ans.is_correct === true,
+                          'bg-danger-bg text-danger border border-danger-border':
+                            ans.is_correct === false,
+                          'bg-warning-bg text-warning border border-warning-border':
+                            ans.is_correct === null || ans.is_correct === undefined,
                         }"
                       >
                         <CheckCircle2 v-if="ans.is_correct === true" class="h-3 w-3" />
@@ -1061,13 +1181,17 @@ async function handleDownloadResume(app: JobApplication) {
                     </div>
 
                     <!-- Question Body -->
-                    <div class="text-xs sm:text-sm font-semibold text-text-strong leading-relaxed whitespace-pre-line">
+                    <div
+                      class="text-xs sm:text-sm font-semibold text-text-strong leading-relaxed whitespace-pre-line"
+                    >
                       {{ ans.question_body }}
                     </div>
 
                     <!-- Options Rubric (for Single Choice, Multiple Choice, True/False) -->
                     <div
-                      v-if="ans.options && ans.options.length > 0 && ans.question_type !== 'structured'"
+                      v-if="
+                        ans.options && ans.options.length > 0 && ans.question_type !== 'structured'
+                      "
                       class="space-y-2 pt-1"
                     >
                       <div
@@ -1075,10 +1199,14 @@ async function handleDownloadResume(app: JobApplication) {
                         :key="opt.id"
                         class="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-lg border text-xs transition"
                         :class="{
-                          'bg-success-bg/40 border-success text-success font-medium': opt.is_correct && isCandidateSelected(ans.answer, opt.id),
-                          'bg-danger-bg/40 border-danger text-danger font-medium': !opt.is_correct && isCandidateSelected(ans.answer, opt.id),
-                          'bg-success-bg/15 border-success/40 text-text-strong font-medium': opt.is_correct && !isCandidateSelected(ans.answer, opt.id),
-                          'bg-surface-raised/40 border-border text-text-secondary': !opt.is_correct && !isCandidateSelected(ans.answer, opt.id),
+                          'bg-success-bg/40 border-success text-success font-medium':
+                            opt.is_correct && isCandidateSelected(ans.answer, opt.id),
+                          'bg-danger-bg/40 border-danger text-danger font-medium':
+                            !opt.is_correct && isCandidateSelected(ans.answer, opt.id),
+                          'bg-success-bg/15 border-success/40 text-text-strong font-medium':
+                            opt.is_correct && !isCandidateSelected(ans.answer, opt.id),
+                          'bg-surface-raised/40 border-border text-text-secondary':
+                            !opt.is_correct && !isCandidateSelected(ans.answer, opt.id),
                         }"
                       >
                         <div class="flex items-center gap-2.5 min-w-0">
@@ -1086,14 +1214,21 @@ async function handleDownloadResume(app: JobApplication) {
                           <div
                             class="h-5 w-5 rounded-full flex items-center justify-center shrink-0 text-white"
                             :class="{
-                              'bg-success': opt.is_correct && isCandidateSelected(ans.answer, opt.id),
-                              'bg-danger': !opt.is_correct && isCandidateSelected(ans.answer, opt.id),
-                              'bg-success/70': opt.is_correct && !isCandidateSelected(ans.answer, opt.id),
-                              'border border-border text-transparent': !opt.is_correct && !isCandidateSelected(ans.answer, opt.id),
+                              'bg-success':
+                                opt.is_correct && isCandidateSelected(ans.answer, opt.id),
+                              'bg-danger':
+                                !opt.is_correct && isCandidateSelected(ans.answer, opt.id),
+                              'bg-success/70':
+                                opt.is_correct && !isCandidateSelected(ans.answer, opt.id),
+                              'border border-border text-transparent':
+                                !opt.is_correct && !isCandidateSelected(ans.answer, opt.id),
                             }"
                           >
                             <Check v-if="opt.is_correct" class="h-3 w-3 text-white" />
-                            <X v-else-if="isCandidateSelected(ans.answer, opt.id)" class="h-3 w-3 text-white" />
+                            <X
+                              v-else-if="isCandidateSelected(ans.answer, opt.id)"
+                              class="h-3 w-3 text-white"
+                            />
                           </div>
                           <span class="break-words">{{ opt.text }}</span>
                         </div>
@@ -1103,7 +1238,9 @@ async function handleDownloadResume(app: JobApplication) {
                           <span
                             v-if="isCandidateSelected(ans.answer, opt.id)"
                             class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
-                            :class="opt.is_correct ? 'bg-success text-white' : 'bg-danger text-white'"
+                            :class="
+                              opt.is_correct ? 'bg-success text-white' : 'bg-danger text-white'
+                            "
                           >
                             Candidate's Choice
                           </span>
@@ -1118,14 +1255,13 @@ async function handleDownloadResume(app: JobApplication) {
                     </div>
 
                     <!-- Structured / Written Open-Ended Response -->
-                    <div
-                      v-else-if="ans.question_type === 'structured'"
-                      class="pt-1 space-y-2"
-                    >
+                    <div v-else-if="ans.question_type === 'structured'" class="pt-1 space-y-2">
                       <div class="text-[11px] font-bold uppercase tracking-wider text-text-muted">
                         Candidate's Response:
                       </div>
-                      <div class="p-3 bg-surface-raised rounded-lg border border-border text-xs text-text-strong whitespace-pre-line leading-relaxed">
+                      <div
+                        class="p-3 bg-surface-raised rounded-lg border border-border text-xs text-text-strong whitespace-pre-line leading-relaxed"
+                      >
                         {{ ans.answer || '(No answer written)' }}
                       </div>
                     </div>
@@ -1149,14 +1285,21 @@ async function handleDownloadResume(app: JobApplication) {
             <!-- Fallback if attempt could not be loaded -->
             <div v-else class="py-12 text-center space-y-2">
               <AlertCircle class="h-8 w-8 text-text-subtle mx-auto" />
-              <p class="text-xs sm:text-sm text-text-muted">No assessment results could be loaded for this applicant.</p>
+              <p class="text-xs sm:text-sm text-text-muted">
+                No assessment results could be loaded for this applicant.
+              </p>
             </div>
           </div>
 
           <!-- Modal Footer with Quick Pipeline Actions -->
-          <div class="px-5 sm:px-6 py-3.5 border-t border-border bg-surface flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div
+            class="px-5 sm:px-6 py-3.5 border-t border-border bg-surface flex flex-col sm:flex-row items-center justify-between gap-3"
+          >
             <!-- Pipeline Quick Actions -->
-            <div v-if="selectedApplicationForQuiz" class="flex flex-wrap items-center gap-1.5 self-start sm:self-auto">
+            <div
+              v-if="selectedApplicationForQuiz"
+              class="flex flex-wrap items-center gap-1.5 self-start sm:self-auto"
+            >
               <span class="text-[11px] font-semibold text-text-muted mr-1">Move Candidate:</span>
               <button
                 v-if="['applied', 'under_review'].includes(selectedApplicationForQuiz.status)"

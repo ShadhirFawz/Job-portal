@@ -10,6 +10,9 @@ public class Organization
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
+    [JsonPropertyName("slug")]
+    public string? Slug { get; set; }
+
     [JsonPropertyName("legal_name")]
     public string? LegalName { get; set; }
 

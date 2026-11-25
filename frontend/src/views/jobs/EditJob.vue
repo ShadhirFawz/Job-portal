@@ -36,7 +36,8 @@ const router = useRouter()
 const auth = useAuthStore()
 const { confirm: showConfirm } = useConfirm()
 
-const jobId = route.params.id as string
+const jobSlug = route.params.slug as string
+const jobId = jobSlug
 
 const loadingJob = ref(true)
 const saving = ref(false)
@@ -62,9 +63,21 @@ const techStacks = ref<string[]>([])
 const newTechInput = ref('')
 
 const popularTechStacks = [
-  'TypeScript', 'JavaScript', 'Vue.js', 'React', 'Node.js',
-  'Python', 'Go', 'Java', 'C# / .NET', 'PostgreSQL',
-  'Docker', 'Kubernetes', 'AWS', 'GCP', 'Tailwind CSS',
+  'TypeScript',
+  'JavaScript',
+  'Vue.js',
+  'React',
+  'Node.js',
+  'Python',
+  'Go',
+  'Java',
+  'C# / .NET',
+  'PostgreSQL',
+  'Docker',
+  'Kubernetes',
+  'AWS',
+  'GCP',
+  'Tailwind CSS',
 ]
 
 function addTechStack(name?: string) {
@@ -124,7 +137,7 @@ const canAddProcess = computed(() => processes.value.length < 3)
 
 function getBankQuestionsCount(bankId: string | null | undefined): number {
   if (!bankId) return -1
-  const bank = questionBanks.value.find(b => b.id === bankId)
+  const bank = questionBanks.value.find((b) => b.id === bankId)
   return bank ? (bank.questions_count ?? bank.questions?.length ?? 0) : -1
 }
 
@@ -161,14 +174,14 @@ const isOwner = computed(() => {
 })
 
 onMounted(async () => {
-  if (!jobId) {
+  if (!jobSlug) {
     errorMsg.value = 'Job ID not provided.'
     loadingJob.value = false
     return
   }
 
   try {
-    const fetched = await jobService.fetchJobById(jobId, false)
+    const fetched = await jobService.fetchJobById(jobSlug, false)
     if (!fetched) {
       errorMsg.value = 'Job posting not found.'
       loadingJob.value = false
@@ -223,7 +236,7 @@ onMounted(async () => {
       processes.value = fetched.selection_processes
         .slice()
         .sort((a, b) => a.order_index - b.order_index)
-        .map(p => ({
+        .map((p) => ({
           id: p.id,
           title: p.title || '',
           process_type: p.process_type || 'screening',
@@ -238,7 +251,9 @@ onMounted(async () => {
     if (fetched.organization_id) {
       loadingBanks.value = true
       try {
-        questionBanks.value = await questionBankService.getOrganizationBanks(fetched.organization_id)
+        questionBanks.value = await questionBankService.getOrganizationBanks(
+          fetched.organization_id,
+        )
       } catch (err) {
         console.error('Failed to load question banks:', err)
       } finally {
@@ -306,7 +321,7 @@ async function handleSubmit(publish = false) {
 
     await jobService.updateJob(job.value.id, auth.user.id, payload)
     toast.success(publish ? 'Job published successfully!' : 'Job updated successfully!')
-    router.push(`/jobs/${job.value.id}`)
+    router.push(`/jobs/${job.value.slug || jobSlug || job.value.id}`)
   } catch (err: any) {
     console.error(err)
     errorMsg.value = err.message || 'Failed to update job post'
@@ -320,9 +335,11 @@ async function handleSubmit(publish = false) {
 <template>
   <div class="min-h-screen bg-page py-6 sm:py-10 px-3 sm:px-6 lg:px-8">
     <div class="max-w-4xl mx-auto space-y-6 sm:space-y-8">
-
       <!-- Loading State -->
-      <div v-if="loadingJob" class="flex flex-col items-center justify-center min-h-[50vh] text-text-muted">
+      <div
+        v-if="loadingJob"
+        class="flex flex-col items-center justify-center min-h-[50vh] text-text-muted"
+      >
         <Loader2 class="h-8 w-8 animate-spin text-primary mb-3" />
         <p class="text-sm">Loading job posting details…</p>
       </div>
@@ -335,7 +352,10 @@ async function handleSubmit(publish = false) {
         <ShieldAlert class="h-12 w-12 text-danger mx-auto" />
         <h2 class="text-lg sm:text-xl font-bold text-text-strong">Access Denied</h2>
         <p class="text-sm text-text-muted max-w-md mx-auto">
-          {{ errorMsg || 'You do not have permission to edit this job posting. Only the creator of this job post can make changes.' }}
+          {{
+            errorMsg ||
+            'You do not have permission to edit this job posting. Only the creator of this job post can make changes.'
+          }}
         </p>
         <div class="pt-2">
           <button
@@ -361,7 +381,9 @@ async function handleSubmit(publish = false) {
           </button>
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-text-strong">
+              <h1
+                class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-text-strong"
+              >
                 Edit Job Posting
               </h1>
               <p class="text-xs sm:text-sm lg:text-base text-text-secondary mt-1.5 leading-relaxed">
@@ -395,9 +417,13 @@ async function handleSubmit(publish = false) {
           </div>
 
           <!-- 1. BASIC INFORMATION -->
-          <section class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
+          <section
+            class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6"
+          >
             <div class="border-b border-border pb-4">
-              <h2 class="text-base sm:text-lg lg:text-xl font-semibold text-text-strong flex items-center gap-2">
+              <h2
+                class="text-base sm:text-lg lg:text-xl font-semibold text-text-strong flex items-center gap-2"
+              >
                 <Briefcase class="h-5 w-5 text-primary flex-shrink-0" /> Basic Information
               </h2>
               <p class="text-xs sm:text-sm text-text-muted mt-1">
@@ -482,7 +508,9 @@ async function handleSubmit(publish = false) {
               <!-- Rich Text: Nice to Have -->
               <div>
                 <div class="flex items-center justify-between mb-1">
-                  <label class="text-xs sm:text-sm font-medium text-text-secondary flex items-center gap-1.5">
+                  <label
+                    class="text-xs sm:text-sm font-medium text-text-secondary flex items-center gap-1.5"
+                  >
                     <Check class="h-4 w-4 text-text-secondary" /> Nice to have (Bonus skills)
                   </label>
                   <span class="text-[11px] sm:text-xs text-text-subtle">Optional</span>
@@ -500,13 +528,16 @@ async function handleSubmit(publish = false) {
               <!-- Rich Text: What We Offer -->
               <div>
                 <div class="flex items-center justify-between mb-1">
-                  <label class="text-xs sm:text-sm font-medium text-text-secondary flex items-center gap-1.5">
+                  <label
+                    class="text-xs sm:text-sm font-medium text-text-secondary flex items-center gap-1.5"
+                  >
                     <Gift class="h-4 w-4 text-text-secondary" /> What we offer (Benefits & Perks)
                   </label>
                   <span class="text-[11px] sm:text-xs text-text-subtle">Optional</span>
                 </div>
                 <p class="text-[11px] sm:text-xs text-text-muted mb-2">
-                  Health coverage, remote stipend, flexible hours, paid time off, learning budgets...
+                  Health coverage, remote stipend, flexible hours, paid time off, learning
+                  budgets...
                 </p>
                 <RichTextEditor
                   v-model="whatWeOffer"
@@ -518,13 +549,19 @@ async function handleSubmit(publish = false) {
           </section>
 
           <!-- 2. TECH STACKS -->
-          <section class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-5">
+          <section
+            class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-5"
+          >
             <div class="border-b border-border pb-4">
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
-                <h2 class="text-base sm:text-lg lg:text-xl font-semibold text-text-strong flex items-center gap-2">
+                <h2
+                  class="text-base sm:text-lg lg:text-xl font-semibold text-text-strong flex items-center gap-2"
+                >
                   <Code2 class="h-5 w-5 text-primary flex-shrink-0" /> Tech Stacks
                 </h2>
-                <span class="text-[11px] sm:text-xs text-text-subtle">Optional (for technical roles)</span>
+                <span class="text-[11px] sm:text-xs text-text-subtle"
+                  >Optional (for technical roles)</span
+                >
               </div>
               <p class="text-xs sm:text-sm text-text-muted mt-1">
                 Highlight the key technologies, languages, and tools relevant to this position.
@@ -552,7 +589,9 @@ async function handleSubmit(publish = false) {
 
               <!-- Quick Add Chips -->
               <div>
-                <span class="text-[11px] sm:text-xs font-medium text-text-secondary block mb-2">Popular presets:</span>
+                <span class="text-[11px] sm:text-xs font-medium text-text-secondary block mb-2"
+                  >Popular presets:</span
+                >
                 <div class="flex flex-wrap gap-1.5">
                   <button
                     v-for="preset in popularTechStacks"
@@ -568,7 +607,9 @@ async function handleSubmit(publish = false) {
 
               <!-- Active Selected Tech Badges -->
               <div v-if="techStacks.length > 0" class="pt-3 border-t border-border">
-                <span class="text-xs font-semibold text-text-secondary block mb-2.5">Selected Technologies:</span>
+                <span class="text-xs font-semibold text-text-secondary block mb-2.5"
+                  >Selected Technologies:</span
+                >
                 <div class="flex flex-wrap gap-2">
                   <span
                     v-for="(tech, idx) in techStacks"
@@ -592,9 +633,13 @@ async function handleSubmit(publish = false) {
           </section>
 
           <!-- 3. CLASSIFICATION & LOCATION -->
-          <section class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-5">
+          <section
+            class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-5"
+          >
             <div class="border-b border-border pb-4">
-              <h2 class="text-base sm:text-lg lg:text-xl font-semibold text-text-strong flex items-center gap-2">
+              <h2
+                class="text-base sm:text-lg lg:text-xl font-semibold text-text-strong flex items-center gap-2"
+              >
                 <Layers class="h-5 w-5 text-primary flex-shrink-0" /> Classification & Location
               </h2>
               <p class="text-xs sm:text-sm text-text-muted mt-1">
@@ -606,7 +651,9 @@ async function handleSubmit(publish = false) {
               <!-- Row 1: Type, Mode, Level -->
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                 <div>
-                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Job Type</label>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                    >Job Type</label
+                  >
                   <select
                     v-model="jobType"
                     class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3 py-2.5 text-xs sm:text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
@@ -621,7 +668,9 @@ async function handleSubmit(publish = false) {
                 </div>
 
                 <div>
-                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Work Mode</label>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                    >Work Mode</label
+                  >
                   <select
                     v-model="workMode"
                     class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3 py-2.5 text-xs sm:text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
@@ -633,7 +682,9 @@ async function handleSubmit(publish = false) {
                 </div>
 
                 <div class="sm:col-span-2 lg:col-span-1">
-                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Experience Level</label>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                    >Experience Level</label
+                  >
                   <select
                     v-model="experienceLevel"
                     class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3 py-2.5 text-xs sm:text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
@@ -652,7 +703,9 @@ async function handleSubmit(publish = false) {
               <!-- Row 2: Department & Category -->
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                 <div>
-                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Department</label>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                    >Department</label
+                  >
                   <input
                     v-model="department"
                     type="text"
@@ -662,7 +715,9 @@ async function handleSubmit(publish = false) {
                 </div>
 
                 <div>
-                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Category</label>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                    >Category</label
+                  >
                   <input
                     v-model="category"
                     type="text"
@@ -675,7 +730,9 @@ async function handleSubmit(publish = false) {
               <!-- Row 3: City & Country Code -->
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                 <div>
-                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">City</label>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                    >City</label
+                  >
                   <input
                     v-model="city"
                     type="text"
@@ -685,7 +742,9 @@ async function handleSubmit(publish = false) {
                 </div>
 
                 <div>
-                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Country Code</label>
+                  <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                    >Country Code</label
+                  >
                   <input
                     v-model="countryCode"
                     type="text"
@@ -699,9 +758,13 @@ async function handleSubmit(publish = false) {
           </section>
 
           <!-- 4. COMPENSATION -->
-          <section class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-5">
+          <section
+            class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-5"
+          >
             <div class="border-b border-border pb-4">
-              <h2 class="text-base sm:text-lg lg:text-xl font-semibold text-text-strong flex items-center gap-2">
+              <h2
+                class="text-base sm:text-lg lg:text-xl font-semibold text-text-strong flex items-center gap-2"
+              >
                 <DollarSign class="h-5 w-5 text-primary flex-shrink-0" /> Compensation & Pay Range
               </h2>
               <p class="text-xs sm:text-sm text-text-muted mt-1">
@@ -711,7 +774,9 @@ async function handleSubmit(publish = false) {
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Min Salary</label>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Min Salary</label
+                >
                 <input
                   v-model.number="salaryMin"
                   type="number"
@@ -721,7 +786,9 @@ async function handleSubmit(publish = false) {
               </div>
 
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Max Salary</label>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Max Salary</label
+                >
                 <input
                   v-model.number="salaryMax"
                   type="number"
@@ -731,7 +798,9 @@ async function handleSubmit(publish = false) {
               </div>
 
               <div>
-                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5">Currency</label>
+                <label class="block text-xs sm:text-sm font-medium text-text-secondary mb-1.5"
+                  >Currency</label
+                >
                 <input
                   v-model="salaryCurrency"
                   type="text"
@@ -749,7 +818,10 @@ async function handleSubmit(publish = false) {
                 type="checkbox"
                 class="h-4.5 w-4.5 sm:h-5 sm:w-5 rounded border-border text-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
               />
-              <label for="showSalaryEdit" class="text-xs sm:text-sm font-medium text-text-secondary cursor-pointer select-none">
+              <label
+                for="showSalaryEdit"
+                class="text-xs sm:text-sm font-medium text-text-secondary cursor-pointer select-none"
+              >
                 Display salary range publicly on the job posting
               </label>
             </div>
@@ -766,7 +838,8 @@ async function handleSubmit(publish = false) {
                   class="block w-full rounded-lg sm:rounded-xl border border-border bg-card text-text-strong px-3.5 py-2.5 text-xs sm:text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
                 />
                 <p class="text-[11px] sm:text-xs text-text-muted mt-1">
-                  Leave empty for a rolling deadline. After this date, the job will automatically be closed.
+                  Leave empty for a rolling deadline. After this date, the job will automatically be
+                  closed.
                 </p>
               </div>
 
@@ -777,7 +850,10 @@ async function handleSubmit(publish = false) {
                   type="checkbox"
                   class="h-4.5 w-4.5 sm:h-5 sm:w-5 rounded border-border text-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
                 />
-                <label for="acceptApplicationsEdit" class="text-xs sm:text-sm font-medium text-text-secondary cursor-pointer select-none">
+                <label
+                  for="acceptApplicationsEdit"
+                  class="text-xs sm:text-sm font-medium text-text-secondary cursor-pointer select-none"
+                >
                   Currently accepting applications
                 </label>
               </div>
@@ -785,13 +861,16 @@ async function handleSubmit(publish = false) {
           </section>
 
           <!-- 5. HIRING PROCESS & SELECTION PATHWAY -->
-          <section class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-6">
+          <section
+            class="bg-card shadow-sm border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 space-y-6"
+          >
             <div class="border-b border-border pb-4">
               <h2 class="text-base sm:text-lg lg:text-xl font-semibold text-text-strong">
                 Hiring Process & Application Pathway
               </h2>
               <p class="text-xs sm:text-sm text-text-muted mt-1">
-                Choose how candidates apply: through custom company instructions or our structured stage assessments.
+                Choose how candidates apply: through custom company instructions or our structured
+                stage assessments.
               </p>
             </div>
 
@@ -809,19 +888,25 @@ async function handleSubmit(publish = false) {
                     Perform hiring process on our own (Custom instructions)
                   </span>
                   <span class="block text-[11px] sm:text-xs text-text-muted mt-1 leading-relaxed">
-                    Check this if you want candidates to apply externally (e.g., through your careers portal or email) rather than using platform assessment stages.
+                    Check this if you want candidates to apply externally (e.g., through your
+                    careers portal or email) rather than using platform assessment stages.
                   </span>
                 </label>
               </div>
             </div>
 
             <!-- OPTION A: Custom Hiring Instructions -->
-            <div v-if="hasCustomHiringProcess" class="space-y-3 pl-3 sm:pl-4 border-l-2 border-primary ml-1">
+            <div
+              v-if="hasCustomHiringProcess"
+              class="space-y-3 pl-3 sm:pl-4 border-l-2 border-primary ml-1"
+            >
               <label class="block text-xs sm:text-sm font-semibold text-text-strong">
                 How to Apply (Instructions for Candidates) <span class="text-danger">*</span>
               </label>
               <p class="text-[11px] sm:text-xs text-text-muted mb-2">
-                Explain clearly what candidates should do (e.g. submit resumes to careers@company.com, link to external application portal, required attachments, etc.).
+                Explain clearly what candidates should do (e.g. submit resumes to
+                careers@company.com, link to external application portal, required attachments,
+                etc.).
               </p>
               <RichTextEditor
                 v-model="howToApply"
@@ -833,7 +918,9 @@ async function handleSubmit(publish = false) {
             <!-- OPTION B: Platform Selection Stages -->
             <div v-else class="space-y-6">
               <!-- Stage Visibility Checkbox -->
-              <div class="p-4 rounded-xl border border-primary/30 bg-primary-light flex items-start gap-3">
+              <div
+                class="p-4 rounded-xl border border-primary/30 bg-primary-light flex items-start gap-3"
+              >
                 <input
                   id="visibilityCheckEdit"
                   v-model="isSelectionProcessPublic"
@@ -841,12 +928,20 @@ async function handleSubmit(publish = false) {
                   class="mt-0.5 h-4.5 w-4.5 sm:h-5 sm:w-5 rounded border-border text-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
                 />
                 <label for="visibilityCheckEdit" class="cursor-pointer select-none">
-                  <span class="text-xs sm:text-sm font-semibold text-text-strong flex items-center gap-1.5">
-                    <component :is="isSelectionProcessPublic ? Eye : EyeOff" class="h-4 w-4 text-primary flex-shrink-0" />
+                  <span
+                    class="text-xs sm:text-sm font-semibold text-text-strong flex items-center gap-1.5"
+                  >
+                    <component
+                      :is="isSelectionProcessPublic ? Eye : EyeOff"
+                      class="h-4 w-4 text-primary flex-shrink-0"
+                    />
                     Make selection process stages visible to candidates
                   </span>
-                  <span class="block text-[11px] sm:text-xs text-text-secondary mt-1 leading-relaxed">
-                    When unchecked, selection stages remain internal and are only visible to organization administrators and staff members.
+                  <span
+                    class="block text-[11px] sm:text-xs text-text-secondary mt-1 leading-relaxed"
+                  >
+                    When unchecked, selection stages remain internal and are only visible to
+                    organization administrators and staff members.
                   </span>
                 </label>
               </div>
@@ -858,7 +953,9 @@ async function handleSubmit(publish = false) {
                     <h3 class="text-xs sm:text-sm font-semibold text-text-strong">
                       Platform Assessment Stages (Max 3)
                     </h3>
-                    <p class="text-[11px] sm:text-xs text-text-muted">Configure progressive evaluation steps for applicants.</p>
+                    <p class="text-[11px] sm:text-xs text-text-muted">
+                      Configure progressive evaluation steps for applicants.
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -874,7 +971,8 @@ async function handleSubmit(publish = false) {
                   v-if="processes.length === 0"
                   class="text-xs text-text-muted py-8 text-center border-2 border-dashed border-border rounded-xl px-4"
                 >
-                  No stages added. Candidates will submit a direct application without preliminary tests.
+                  No stages added. Candidates will submit a direct application without preliminary
+                  tests.
                 </div>
 
                 <div
@@ -883,7 +981,9 @@ async function handleSubmit(publish = false) {
                   class="border border-border rounded-xl p-4 sm:p-5 space-y-4 bg-surface-raised relative shadow-xs"
                 >
                   <div class="flex items-center justify-between border-b border-border pb-2.5">
-                    <span class="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <span
+                      class="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5"
+                    >
                       Stage {{ index + 1 }}
                     </span>
                     <button
@@ -898,7 +998,9 @@ async function handleSubmit(publish = false) {
 
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label class="block text-xs font-medium text-text-secondary mb-1">Stage Title</label>
+                      <label class="block text-xs font-medium text-text-secondary mb-1"
+                        >Stage Title</label
+                      >
                       <input
                         v-model="process.title"
                         type="text"
@@ -907,7 +1009,9 @@ async function handleSubmit(publish = false) {
                       />
                     </div>
                     <div>
-                      <label class="block text-xs font-medium text-text-secondary mb-1">Assessment Type</label>
+                      <label class="block text-xs font-medium text-text-secondary mb-1"
+                        >Assessment Type</label
+                      >
                       <select
                         v-model="process.process_type"
                         class="block w-full rounded-lg border border-border bg-card text-text-strong px-3 py-2 text-xs sm:text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
@@ -924,7 +1028,9 @@ async function handleSubmit(publish = false) {
                   </div>
 
                   <div>
-                    <label class="block text-xs font-medium text-text-secondary mb-1">Description / Brief</label>
+                    <label class="block text-xs font-medium text-text-secondary mb-1"
+                      >Description / Brief</label
+                    >
                     <textarea
                       v-model="process.description"
                       rows="2"
@@ -939,7 +1045,9 @@ async function handleSubmit(publish = false) {
                     class="p-3.5 rounded-xl border border-primary/20 bg-primary-light/40 space-y-2"
                   >
                     <div class="flex items-center justify-between">
-                      <label class="text-xs font-semibold text-text-strong flex items-center gap-1.5">
+                      <label
+                        class="text-xs font-semibold text-text-strong flex items-center gap-1.5"
+                      >
                         <Layers class="h-3.5 w-3.5 text-primary" />
                         Question Bank Assessment *
                       </label>
@@ -951,16 +1059,21 @@ async function handleSubmit(publish = false) {
                     >
                       <option :value="null">-- Select a Question Bank --</option>
                       <option v-for="b in questionBanks" :key="b.id" :value="b.id">
-                        {{ b.name }} ({{ b.questions_count }} questions, {{ b.total_points }} pts) {{ b.category ? `• ${b.category}` : '' }}
+                        {{ b.name }} ({{ b.questions_count }} questions, {{ b.total_points }} pts)
+                        {{ b.category ? `• ${b.category}` : '' }}
                       </option>
                     </select>
 
                     <p
-                      v-if="process.question_bank_id && getBankQuestionsCount(process.question_bank_id) === 0"
+                      v-if="
+                        process.question_bank_id &&
+                        getBankQuestionsCount(process.question_bank_id) === 0
+                      "
                       class="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-1 font-medium bg-amber-500/10 p-2 rounded-lg border border-amber-500/20"
                     >
                       <AlertCircle class="h-4 w-4 shrink-0 text-amber-500" />
-                      This question bank has 0 questions. Please add questions to it so candidates can take this quiz.
+                      This question bank has 0 questions. Please add questions to it so candidates
+                      can take this quiz.
                     </p>
 
                     <p v-else class="text-[11px] text-text-muted">
@@ -976,12 +1089,17 @@ async function handleSubmit(publish = false) {
                         type="checkbox"
                         class="h-4 w-4 rounded border-border text-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
                       />
-                      <label :for="`mandatory-edit-${index}`" class="text-xs font-medium text-text-secondary cursor-pointer select-none">
+                      <label
+                        :for="`mandatory-edit-${index}`"
+                        class="text-xs font-medium text-text-secondary cursor-pointer select-none"
+                      >
                         Mandatory to advance
                       </label>
                     </div>
                     <div class="flex items-center gap-2">
-                      <label class="text-xs font-medium text-text-secondary whitespace-nowrap">Time limit (minutes):</label>
+                      <label class="text-xs font-medium text-text-secondary whitespace-nowrap"
+                        >Time limit (minutes):</label
+                      >
                       <input
                         v-model.number="process.time_limit_minutes"
                         type="number"
@@ -997,7 +1115,9 @@ async function handleSubmit(publish = false) {
           </section>
 
           <!-- SUBMIT ACTIONS -->
-          <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
+          <div
+            class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4"
+          >
             <button
               type="button"
               :disabled="saving"
@@ -1030,7 +1150,6 @@ async function handleSubmit(publish = false) {
           </div>
         </form>
       </template>
-
     </div>
   </div>
 </template>

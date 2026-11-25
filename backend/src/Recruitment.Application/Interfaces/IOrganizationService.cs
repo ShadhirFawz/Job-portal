@@ -4,7 +4,7 @@ namespace Recruitment.Application.Interfaces;
 
 public interface IOrganizationService
 {
-    Task<OrganizationDto?> GetOrganizationAsync(Guid id);
+    Task<OrganizationDto?> GetOrganizationAsync(string identifier);
     Task<List<OrganizationDto>> GetMyOrganizationsAsync(Guid userId);
     Task<bool> CheckIsOrgAdminAsync(Guid orgId, Guid userId, string? userRole = null, Guid? orgCreatedBy = null);
     Task<bool> CheckIsOrgAdminOrStaffAsync(Guid orgId, Guid userId, string? userRole = null, Guid? orgCreatedBy = null);

@@ -118,7 +118,7 @@ async function handleCreate() {
     }
 
     // Success → redirect to company dashboard
-    router.push(`/organizations/${org.id}`)
+    router.push(`/organizations/${org.slug || org.id}`)
 
   } catch (err: any) {
     console.error(err)

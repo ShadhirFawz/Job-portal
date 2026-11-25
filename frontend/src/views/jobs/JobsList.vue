@@ -239,7 +239,8 @@ function getExperienceLabel(val: string): string {
             Find your next opportunity
           </h1>
           <p class="mt-2 text-sm sm:text-base text-text-muted">
-            Explore verified opportunities across top engineering, product, and business organizations.
+            Explore verified opportunities across top engineering, product, and business
+            organizations.
           </p>
         </div>
 
@@ -250,7 +251,9 @@ function getExperienceLabel(val: string): string {
         >
           <!-- Keyword input -->
           <div class="relative flex-1">
-            <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted pointer-events-none" />
+            <Search
+              class="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted pointer-events-none"
+            />
             <input
               v-model="searchInput"
               type="text"
@@ -264,7 +267,9 @@ function getExperienceLabel(val: string): string {
 
           <!-- Location input -->
           <div class="relative md:w-72">
-            <MapPin class="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted pointer-events-none" />
+            <MapPin
+              class="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted pointer-events-none"
+            />
             <input
               v-model="locationInput"
               type="text"
@@ -290,7 +295,10 @@ function getExperienceLabel(val: string): string {
               class="md:hidden inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg border border-border bg-card text-text-strong hover:bg-surface-raised transition"
             >
               <SlidersHorizontal class="h-4 w-4" />
-              <span v-if="activeFiltersCount > 0" class="h-5 w-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold">
+              <span
+                v-if="activeFiltersCount > 0"
+                class="h-5 w-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold"
+              >
                 {{ activeFiltersCount }}
               </span>
             </button>
@@ -306,7 +314,17 @@ function getExperienceLabel(val: string): string {
             class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-surface-raised border border-border text-text-strong font-medium"
           >
             "{{ searchQuery }}"
-            <button type="button" @click="searchQuery = ''; searchInput = ''; page = 1; syncUrl(); fetchJobs()" class="hover:text-primary">
+            <button
+              type="button"
+              @click="
+                searchQuery = '';
+                searchInput = '';
+                page = 1;
+                syncUrl();
+                fetchJobs();
+              "
+              class="hover:text-primary"
+            >
               <X class="h-3 w-3" />
             </button>
           </span>
@@ -316,7 +334,17 @@ function getExperienceLabel(val: string): string {
             class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-surface-raised border border-border text-text-strong font-medium"
           >
             Location: {{ location }}
-            <button type="button" @click="location = ''; locationInput = ''; page = 1; syncUrl(); fetchJobs()" class="hover:text-primary">
+            <button
+              type="button"
+              @click="
+                location = ''
+                locationInput = ''
+                page = 1
+                syncUrl()
+                fetchJobs()
+              "
+              class="hover:text-primary"
+            >
               <X class="h-3 w-3" />
             </button>
           </span>
@@ -326,7 +354,16 @@ function getExperienceLabel(val: string): string {
             class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-surface-raised border border-border text-text-strong font-medium"
           >
             Type: {{ getJobTypeLabel(jobType) }}
-            <button type="button" @click="jobType = ''; page = 1; syncUrl(); fetchJobs()" class="hover:text-primary">
+            <button
+              type="button"
+              @click="
+                jobType = ''
+                page = 1
+                syncUrl()
+                fetchJobs()
+              "
+              class="hover:text-primary"
+            >
               <X class="h-3 w-3" />
             </button>
           </span>
@@ -336,7 +373,16 @@ function getExperienceLabel(val: string): string {
             class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-surface-raised border border-border text-text-strong font-medium"
           >
             Mode: {{ getWorkModeLabel(workMode) }}
-            <button type="button" @click="workMode = ''; page = 1; syncUrl(); fetchJobs()" class="hover:text-primary">
+            <button
+              type="button"
+              @click="
+                workMode = ''
+                page = 1
+                syncUrl()
+                fetchJobs()
+              "
+              class="hover:text-primary"
+            >
               <X class="h-3 w-3" />
             </button>
           </span>
@@ -346,7 +392,16 @@ function getExperienceLabel(val: string): string {
             class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-surface-raised border border-border text-text-strong font-medium"
           >
             Level: {{ getExperienceLabel(experienceLevel) }}
-            <button type="button" @click="experienceLevel = ''; page = 1; syncUrl(); fetchJobs()" class="hover:text-primary">
+            <button
+              type="button"
+              @click="
+                experienceLevel = ''
+                page = 1
+                syncUrl()
+                fetchJobs()
+              "
+              class="hover:text-primary"
+            >
               <X class="h-3 w-3" />
             </button>
           </span>
@@ -366,12 +421,11 @@ function getExperienceLabel(val: string): string {
     <!-- Main Content Area -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div class="flex flex-col md:flex-row gap-8 items-start">
-        
         <!-- Sidebar Filters (Desktop + Mobile Drawer) -->
         <aside
           :class="[
             'w-full md:w-64 lg:w-72 flex-shrink-0 transition-all',
-            showMobileFilters ? 'block mb-6 md:mb-0' : 'hidden md:block'
+            showMobileFilters ? 'block mb-6 md:mb-0' : 'hidden md:block',
           ]"
         >
           <div class="bg-card border border-border rounded-xl p-5 shadow-xs space-y-6">
@@ -392,7 +446,9 @@ function getExperienceLabel(val: string): string {
 
             <!-- Job Type Filter -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">
+              <label
+                class="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-2"
+              >
                 Employment Type
               </label>
               <select
@@ -411,7 +467,9 @@ function getExperienceLabel(val: string): string {
 
             <!-- Work Mode Filter -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">
+              <label
+                class="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-2"
+              >
                 Workplace Mode
               </label>
               <select
@@ -427,7 +485,9 @@ function getExperienceLabel(val: string): string {
 
             <!-- Experience Level Filter -->
             <div>
-              <label class="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">
+              <label
+                class="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-2"
+              >
                 Experience Level
               </label>
               <select
@@ -443,7 +503,6 @@ function getExperienceLabel(val: string): string {
                 <option value="executive">Executive</option>
               </select>
             </div>
-
           </div>
         </aside>
 
@@ -497,14 +556,17 @@ function getExperienceLabel(val: string): string {
             v-else-if="jobs.length === 0"
             class="bg-card border border-border rounded-xl p-10 sm:p-14 text-center shadow-xs"
           >
-            <div class="h-12 w-12 rounded-full bg-surface-raised text-text-muted mx-auto flex items-center justify-center mb-4">
+            <div
+              class="h-12 w-12 rounded-full bg-surface-raised text-text-muted mx-auto flex items-center justify-center mb-4"
+            >
               <Briefcase class="h-6 w-6" />
             </div>
             <h3 class="text-base sm:text-lg font-semibold text-text-strong">
               No jobs match your criteria
             </h3>
             <p class="mt-1 text-sm text-text-muted max-w-sm mx-auto">
-              Try adjusting your search terms, removing filters, or searching for a broader location.
+              Try adjusting your search terms, removing filters, or searching for a broader
+              location.
             </p>
             <button
               type="button"
@@ -521,12 +583,14 @@ function getExperienceLabel(val: string): string {
             <article
               v-for="job in jobs"
               :key="job.id"
-              @click="router.push(`/jobs/${job.id}`)"
+              @click="router.push(`/jobs/${job.slug || job.id}`)"
               class="group bg-card border border-border hover:border-primary/60 rounded-xl p-5 sm:p-6 shadow-xs hover:shadow-sm transition-all cursor-pointer relative"
             >
               <div class="flex items-start gap-4">
                 <!-- Company Logo Avatar -->
-                <div class="h-12 w-12 rounded-lg bg-surface-raised border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div
+                  class="h-12 w-12 rounded-lg bg-surface-raised border border-border flex items-center justify-center overflow-hidden flex-shrink-0"
+                >
                   <img
                     v-if="job.organization?.avatar_path"
                     :src="getOrganizationImageUrl(job.organization.avatar_path) || ''"
@@ -540,44 +604,56 @@ function getExperienceLabel(val: string): string {
                 <div class="flex-1 min-w-0">
                   <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-1">
                     <div>
-                      <h2 class="text-base sm:text-lg font-semibold text-text-strong group-hover:text-primary transition-colors">
+                      <h2
+                        class="text-base sm:text-lg font-semibold text-text-strong group-hover:text-primary transition-colors"
+                      >
                         {{ job.title }}
                       </h2>
-                      <div class="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs sm:text-sm text-text-muted">
+                      <div
+                        class="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs sm:text-sm text-text-muted"
+                      >
                         <span class="font-medium text-text-strong">
                           {{ job.organization?.name || 'Verified Company' }}
                         </span>
                         <span v-if="job.city || job.organization?.city">
-                          • {{ job.city || job.organization?.city }}<span v-if="job.country_code">, {{ job.country_code }}</span>
+                          • {{ job.city || job.organization?.city
+                          }}<span v-if="job.country_code">, {{ job.country_code }}</span>
                         </span>
-                        <span v-if="job.department">
-                          • {{ job.department }}
-                        </span>
+                        <span v-if="job.department"> • {{ job.department }} </span>
                       </div>
                     </div>
 
                     <!-- Date Tag -->
-                    <div class="text-xs text-text-muted whitespace-nowrap flex items-center gap-1 self-start mt-1 sm:mt-0">
+                    <div
+                      class="text-xs text-text-muted whitespace-nowrap flex items-center gap-1 self-start mt-1 sm:mt-0"
+                    >
                       <Clock class="h-3.5 w-3.5" />
                       <span>{{ formatDate(job.published_at) }}</span>
                     </div>
                   </div>
 
                   <!-- Short snippet / excerpt -->
-                  <p v-if="job.short_description" class="mt-2 text-xs sm:text-sm text-text-body line-clamp-2 leading-relaxed">
+                  <p
+                    v-if="job.short_description"
+                    class="mt-2 text-xs sm:text-sm text-text-body line-clamp-2 leading-relaxed"
+                  >
                     {{ job.short_description }}
                   </p>
 
                   <!-- Badges / Tags -->
                   <div class="mt-3.5 flex flex-wrap items-center gap-2">
                     <!-- Job Type -->
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-surface-raised text-text-strong border border-border">
+                    <span
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-surface-raised text-text-strong border border-border"
+                    >
                       <Briefcase class="h-3 w-3 text-text-muted" />
                       {{ getJobTypeLabel(job.job_type) }}
                     </span>
 
                     <!-- Work Mode -->
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-surface-raised text-text-strong border border-border">
+                    <span
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-surface-raised text-text-strong border border-border"
+                    >
                       <MapPin class="h-3 w-3 text-text-muted" />
                       {{ getWorkModeLabel(job.work_mode) }}
                     </span>
@@ -651,7 +727,7 @@ function getExperienceLabel(val: string): string {
                     'h-8 w-8 sm:h-9 sm:w-9 rounded-lg text-xs sm:text-sm font-medium transition flex items-center justify-center',
                     page === p
                       ? 'bg-primary text-white shadow-xs font-bold'
-                      : 'bg-card border border-border text-text-strong hover:bg-surface-raised'
+                      : 'bg-card border border-border text-text-strong hover:bg-surface-raised',
                   ]"
                 >
                   {{ p }}

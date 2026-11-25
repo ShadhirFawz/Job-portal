@@ -15,10 +15,10 @@ public class OrganizationsController : ControllerBase
         _organizationService = organizationService;
     }
 
-    [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetOrganization(Guid id)
+    [HttpGet("{slug}")]
+    public async Task<IActionResult> GetOrganization(string slug)
     {
-        var org = await _organizationService.GetOrganizationAsync(id);
+        var org = await _organizationService.GetOrganizationAsync(slug);
         if (org == null) return NotFound(new { message = "Organization not found." });
         return Ok(org);
     }
@@ -30,25 +30,29 @@ public class OrganizationsController : ControllerBase
         return Ok(orgs);
     }
 
-    [HttpGet("{id:guid}/is-admin")]
+    [HttpGet("{slug}/is-admin")]
     public async Task<IActionResult> CheckIsOrgAdmin(
-        Guid id,
+        string slug,
         [FromQuery] Guid userId,
         [FromQuery] string? userRole = null,
         [FromQuery] Guid? orgCreatedBy = null)
     {
-        var isAdmin = await _organizationService.CheckIsOrgAdminAsync(id, userId, userRole, orgCreatedBy);
+        var org = await _organizationService.GetOrganizationAsync(slug);
+        if (org == null) return NotFound(new { message = "Organization not found." });
+        var isAdmin = await _organizationService.CheckIsOrgAdminAsync(org.Id, userId, userRole, orgCreatedBy);
         return Ok(new { isAdmin });
     }
 
-    [HttpGet("{id:guid}/is-staff")]
+    [HttpGet("{slug}/is-staff")]
     public async Task<IActionResult> CheckIsOrgAdminOrStaff(
-        Guid id,
+        string slug,
         [FromQuery] Guid userId,
         [FromQuery] string? userRole = null,
         [FromQuery] Guid? orgCreatedBy = null)
     {
-        var isStaff = await _organizationService.CheckIsOrgAdminOrStaffAsync(id, userId, userRole, orgCreatedBy);
+        var org = await _organizationService.GetOrganizationAsync(slug);
+        if (org == null) return NotFound(new { message = "Organization not found." });
+        var isStaff = await _organizationService.CheckIsOrgAdminOrStaffAsync(org.Id, userId, userRole, orgCreatedBy);
         return Ok(new { isStaff });
     }
 
@@ -60,7 +64,7 @@ public class OrganizationsController : ControllerBase
         try
         {
             var org = await _organizationService.CreateOrganizationAsync(request, userId);
-            return CreatedAtAction(nameof(GetOrganization), new { id = org.Id }, org);
+            return CreatedAtAction(nameof(GetOrganization), new { slug = org.Slug ?? org.Id.ToString() }, org);
         }
         catch (Exception ex)
         {
@@ -68,14 +72,16 @@ public class OrganizationsController : ControllerBase
         }
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPut("{slug}")]
     public async Task<IActionResult> UpdateOrganization(
-        Guid id,
+        string slug,
         [FromBody] UpdateOrganizationRequest request)
     {
         try
         {
-            var updated = await _organizationService.UpdateOrganizationAsync(id, request);
+            var org = await _organizationService.GetOrganizationAsync(slug);
+            if (org == null) return NotFound(new { message = "Organization not found." });
+            var updated = await _organizationService.UpdateOrganizationAsync(org.Id, request);
             return Ok(updated);
         }
         catch (KeyNotFoundException ex)
@@ -88,16 +94,18 @@ public class OrganizationsController : ControllerBase
         }
     }
 
-    [HttpPost("{id:guid}/email-verification")]
+    [HttpPost("{slug}/email-verification")]
     public async Task<IActionResult> CreateEmailVerification(
-        Guid id,
+        string slug,
         [FromBody] CreateEmailVerificationRequest request,
         [FromQuery] Guid userId)
     {
         try
         {
+            var org = await _organizationService.GetOrganizationAsync(slug);
+            if (org == null) return NotFound(new { message = "Organization not found." });
             var result = await _organizationService.CreateEmailVerificationTokenAsync(
-                id, request.Email, userId, request.Origin);
+                org.Id, request.Email, userId, request.Origin);
             return Ok(result);
         }
         catch (Exception ex)
