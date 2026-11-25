@@ -480,24 +480,30 @@ function formatDate(dateStr: string): string {
         <div
           v-for="resume in resumes"
           :key="resume.id"
-          class="bg-card rounded-xl sm:rounded-2xl border border-border p-4 sm:p-5 md:p-6 shadow-sm hover:border-border-strong transition flex flex-col md:flex-row md:items-center justify-between gap-4"
+          role="button"
+          tabindex="0"
+          @click="handleDownload(resume)"
+          @keydown.enter.prevent="handleDownload(resume)"
+          class="bg-card rounded-xl sm:rounded-2xl border border-border p-4 sm:p-5 md:p-6 shadow-sm hover:border-primary/50 hover:bg-surface-raised/30 transition cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 group"
+          title="Click to download or preview resume"
         >
           <!-- Left: Info -->
           <div class="flex items-start gap-3.5 min-w-0">
             <div
-              class="h-10 w-10 sm:h-11 sm:w-11 rounded-xl flex items-center justify-center shrink-0"
+              class="h-10 w-10 sm:h-11 sm:w-11 rounded-xl flex items-center justify-center shrink-0 transition"
               :class="
                 resume.is_primary
                   ? 'bg-primary text-white shadow-sm'
-                  : 'bg-surface-raised text-text-secondary border border-border'
+                  : 'bg-surface-raised text-text-secondary border border-border group-hover:bg-primary-light group-hover:text-primary'
               "
             >
-              <FileText class="h-5 w-5" />
+              <Loader2 v-if="actionId === resume.id" class="h-5 w-5 animate-spin" />
+              <FileText v-else class="h-5 w-5" />
             </div>
 
             <div class="min-w-0 flex-1 space-y-1">
               <div class="flex flex-wrap items-center gap-2">
-                <h3 class="text-sm sm:text-base font-bold text-text-strong truncate">
+                <h3 class="text-sm sm:text-base font-bold text-text-strong truncate group-hover:text-primary transition">
                   {{ resume.title }}
                 </h3>
                 <span
@@ -525,25 +531,12 @@ function formatDate(dateStr: string): string {
           <div
             class="flex items-center gap-2 self-end md:self-center shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-border w-full md:w-auto justify-end"
           >
-            <!-- Download Button -->
-            <button
-              type="button"
-              :disabled="actionId === resume.id"
-              @click="handleDownload(resume)"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-text-secondary hover:text-text-strong hover:bg-surface-raised transition"
-              title="Download or preview resume"
-            >
-              <Loader2 v-if="actionId === resume.id" class="h-3.5 w-3.5 animate-spin" />
-              <Download v-else class="h-3.5 w-3.5" />
-              <span>Download</span>
-            </button>
-
             <!-- Set as Primary -->
             <button
               v-if="!resume.is_primary"
               type="button"
               :disabled="actionId === resume.id"
-              @click="handleSetPrimary(resume)"
+              @click.stop="handleSetPrimary(resume)"
               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary-light text-primary border border-primary/30 hover:bg-primary/20 transition"
               title="Set as your default primary resume for quick applying"
             >
@@ -555,7 +548,7 @@ function formatDate(dateStr: string): string {
             <button
               type="button"
               :disabled="actionId === resume.id"
-              @click="handleDelete(resume)"
+              @click.stop="handleDelete(resume)"
               class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg alert-error hover:bg-danger-bg transition"
               title="Delete this resume"
             >

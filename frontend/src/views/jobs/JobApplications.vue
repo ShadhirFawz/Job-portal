@@ -888,16 +888,21 @@ async function handleDownloadResume(app: JobApplication) {
               <!-- 1. Candidate Has Attended the Quiz -->
               <div
                 v-if="getQuizAttempt(app)"
-                class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border transition"
+                role="button"
+                tabindex="0"
+                @click="openQuizResults(app)"
+                @keydown.enter.prevent="openQuizResults(app)"
+                class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border transition cursor-pointer hover:shadow-sm group"
                 :class="{
-                  'bg-success-bg/25 border-success-border/60': getQuizAttempt(app)?.passed === true,
-                  'bg-danger-bg/25 border-danger-border/60': getQuizAttempt(app)?.passed === false,
-                  'bg-warning-bg/25 border-warning-border/60':
+                  'bg-success-bg/25 border-success-border/60 hover:border-success': getQuizAttempt(app)?.passed === true,
+                  'bg-danger-bg/25 border-danger-border/60 hover:border-danger': getQuizAttempt(app)?.passed === false,
+                  'bg-warning-bg/25 border-warning-border/60 hover:border-warning':
                     getQuizAttempt(app)?.status === 'submitted' || getQuizAttempt(app)?.requires_manual_review,
-                  'bg-surface-raised/60 border-border':
+                  'bg-surface-raised/60 border-border hover:border-primary/50':
                     getQuizAttempt(app)?.status === 'in_progress' ||
                     getQuizAttempt(app)?.passed === null,
                 }"
+                :title="(getQuizAttempt(app)?.status === 'submitted' || getQuizAttempt(app)?.requires_manual_review) ? 'Click to review assessment' : 'Click to view quiz results'"
               >
                 <div class="flex items-center gap-3 min-w-0">
                   <div
@@ -985,40 +990,41 @@ async function handleDownloadResume(app: JobApplication) {
                   </div>
                 </div>
 
-                <!-- Action Button -->
-                <button
-                  type="button"
-                  @click="openQuizResults(app)"
-                  class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition shrink-0 shadow-xs cursor-pointer"
+                <!-- Subtle Interactive Indicator -->
+                <div class="flex items-center gap-1.5 text-xs font-semibold shrink-0 self-end sm:self-center"
                   :class="
                     getQuizAttempt(app)?.status === 'submitted' || getQuizAttempt(app)?.requires_manual_review
-                      ? 'bg-warning-bg text-warning hover:bg-warning hover:text-white border border-warning-border'
+                      ? 'text-warning'
                       : getQuizAttempt(app)?.passed
-                        ? 'bg-success-bg text-success hover:bg-success hover:text-white border border-success-border'
+                        ? 'text-success'
                         : getQuizAttempt(app)?.passed === false
-                          ? 'bg-danger-bg text-danger hover:bg-danger hover:text-white border border-danger-border'
-                          : 'bg-primary-light text-primary hover:bg-primary hover:text-white border border-primary/30'
+                          ? 'text-danger'
+                          : 'text-primary'
                   "
                 >
-                  <Edit3 v-if="getQuizAttempt(app)?.status === 'submitted' || getQuizAttempt(app)?.requires_manual_review" class="h-3.5 w-3.5" />
-                  <Eye v-else class="h-3.5 w-3.5" />
-                  <span>{{ (getQuizAttempt(app)?.status === 'submitted' || getQuizAttempt(app)?.requires_manual_review) ? 'Review Assessment' : 'View Quiz Results' }}</span>
-                </button>
+                  <Edit3 v-if="getQuizAttempt(app)?.status === 'submitted' || getQuizAttempt(app)?.requires_manual_review" class="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                  <Eye v-else class="h-4 w-4 group-hover:scale-110 transition-transform" />
+                </div>
               </div>
 
               <!-- 2. Application has score record directly -->
               <div
                 v-else-if="app.score !== null && app.score !== undefined"
-                class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-border bg-surface-raised/50"
+                role="button"
+                tabindex="0"
+                @click="openQuizResults(app)"
+                @keydown.enter.prevent="openQuizResults(app)"
+                class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-border bg-surface-raised/50 hover:border-primary/50 hover:bg-surface-raised/80 transition cursor-pointer group"
+                title="Click to view quiz results"
               >
                 <div class="flex items-center gap-3 min-w-0">
                   <div
-                    class="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0"
+                    class="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition"
                   >
                     <Award class="h-4 w-4" />
                   </div>
                   <div class="min-w-0">
-                    <span class="text-xs font-bold text-text-strong truncate">
+                    <span class="text-xs font-bold text-text-strong truncate group-hover:text-primary transition">
                       {{ quizStageTitle }}
                     </span>
                     <p class="text-[11px] font-semibold text-text-strong mt-0.5">
@@ -1026,14 +1032,9 @@ async function handleDownloadResume(app: JobApplication) {
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  @click="openQuizResults(app)"
-                  class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary-light text-primary hover:bg-primary hover:text-white border border-primary/30 transition shrink-0 cursor-pointer"
-                >
-                  <Eye class="h-3.5 w-3.5" />
-                  <span>View Quiz Results</span>
-                </button>
+                <div class="text-primary shrink-0 self-end sm:self-center">
+                  <Eye class="h-4 w-4 group-hover:scale-110 transition-transform" />
+                </div>
               </div>
 
               <!-- 3. Candidate Has NOT Taken Quiz Yet -->
@@ -1069,17 +1070,23 @@ async function handleDownloadResume(app: JobApplication) {
             <!-- Attached Resume -->
             <div
               v-if="app.resume"
-              class="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-raised/40 p-3 rounded-xl border"
+              role="button"
+              tabindex="0"
+              @click="downloadingResumeId !== app.id && handleDownloadResume(app)"
+              @keydown.enter.prevent="downloadingResumeId !== app.id && handleDownloadResume(app)"
+              class="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-raised/40 hover:bg-surface-raised/80 hover:border-primary/50 p-3 rounded-xl border transition cursor-pointer group"
+              :class="{ 'opacity-60 pointer-events-none': downloadingResumeId === app.id }"
+              title="Click to view or download resume"
             >
               <div class="flex items-center gap-3 min-w-0">
                 <div
-                  class="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0"
+                  class="h-9 w-9 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition"
                 >
                   <FileText class="h-4 w-4" />
                 </div>
                 <div class="min-w-0">
                   <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-text-strong truncate">
+                    <span class="text-xs font-bold text-text-strong truncate group-hover:text-primary transition">
                       {{ app.resume.title }}
                     </span>
                   </div>
@@ -1092,16 +1099,10 @@ async function handleDownloadResume(app: JobApplication) {
                 </div>
               </div>
 
-              <button
-                type="button"
-                :disabled="downloadingResumeId === app.id"
-                @click="handleDownloadResume(app)"
-                class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-text-secondary hover:text-text-strong hover:bg-surface-raised transition shrink-0"
-              >
-                <Loader2 v-if="downloadingResumeId === app.id" class="h-3.5 w-3.5 animate-spin" />
-                <Download v-else class="h-3.5 w-3.5" />
-                <span>View / Download Resume</span>
-              </button>
+              <div class="text-text-secondary group-hover:text-primary transition shrink-0 self-end sm:self-center">
+                <Loader2 v-if="downloadingResumeId === app.id" class="h-4 w-4 animate-spin text-primary" />
+                <Download v-else class="h-4 w-4" />
+              </div>
             </div>
 
             <!-- Cover Letter Section (Collapsible) -->

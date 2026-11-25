@@ -1175,10 +1175,15 @@ async function sendVerificationEmail() {
                   <li
                     v-for="job in visibleOrgJobs"
                     :key="job.id"
-                    class="p-4 sm:p-5 hover:bg-subtle flex flex-col lg:flex-row lg:items-center justify-between gap-3"
+                    role="button"
+                    tabindex="0"
+                    @click="$router.push(`/jobs/${job.slug || job.id}`)"
+                    @keydown.enter.prevent="$router.push(`/jobs/${job.slug || job.id}`)"
+                    class="p-4 sm:p-5 hover:bg-subtle transition cursor-pointer flex flex-col lg:flex-row lg:items-center justify-between gap-3 group"
+                    title="Click to view job details"
                   >
                     <div class="min-w-0">
-                      <h3 class="font-medium text-strong text-xs sm:text-sm truncate">
+                      <h3 class="font-medium text-strong text-xs sm:text-sm truncate group-hover:text-primary transition">
                         {{ job.title }}
                       </h3>
                       <p class="text-xs text-muted mt-0.5 capitalize">
@@ -1215,15 +1220,7 @@ async function sendVerificationEmail() {
                       </span>
                       <div class="flex items-center gap-1.5">
                         <button
-                          @click="$router.push(`/jobs/${job.slug || job.id}`)"
-                          class="btn btn-ghost btn-sm !p-1.5 text-primary"
-                          aria-label="View job"
-                          title="View job details"
-                        >
-                          <ArrowBigRightDash :size="18" :stroke-width="2" />
-                        </button>
-                        <button
-                          @click="$router.push(`/jobs/${job.slug || job.id}/applications`)"
+                          @click.stop="$router.push(`/jobs/${job.slug || job.id}/applications`)"
                           class="btn btn-ghost btn-sm text-muted hover:text-primary gap-1 text-xs"
                           :aria-label="`View applications`"
                           title="View applications"

@@ -416,14 +416,21 @@ async function copyPublicProfileLink() {
             <span class="text-[11px] text-text-muted">Verified Document</span>
           </div>
 
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-border bg-surface-raised/40 transition hover:border-border-strong">
+          <div
+            role="button"
+            tabindex="0"
+            @click="handleOpenPdfPreview(primaryResume)"
+            @keydown.enter.prevent="handleOpenPdfPreview(primaryResume)"
+            class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-border bg-surface-raised/40 transition hover:border-primary/50 hover:bg-surface-raised/70 cursor-pointer group"
+            title="Click to preview PDF"
+          >
             <div class="flex items-start gap-3.5 min-w-0">
-              <div class="h-10 w-10 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0 shadow-xs">
+              <div class="h-10 w-10 rounded-lg bg-primary-light text-primary flex items-center justify-center shrink-0 shadow-xs group-hover:bg-primary group-hover:text-white transition">
                 <FileText class="h-5 w-5" />
               </div>
               <div class="min-w-0 space-y-0.5">
                 <div class="flex items-center gap-2">
-                  <h3 class="text-xs sm:text-sm font-bold text-text-strong truncate">
+                  <h3 class="text-xs sm:text-sm font-bold text-text-strong truncate group-hover:text-primary transition">
                     {{ primaryResume.title }}
                   </h3>
                   <span class="inline-flex items-center px-2 py-0.2 rounded-full text-[10px] font-bold uppercase tracking-wider bg-success-bg text-success border border-success-border">
@@ -438,20 +445,11 @@ async function copyPublicProfileLink() {
               </div>
             </div>
 
-            <!-- Preview & Download Actions -->
+            <!-- Download Action -->
             <div class="flex items-center gap-2 shrink-0 self-start sm:self-auto">
               <button
                 type="button"
-                @click="handleOpenPdfPreview(primaryResume)"
-                class="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-primary-light text-primary hover:bg-primary hover:text-white border border-primary/25 transition shadow-xs cursor-pointer"
-              >
-                <Eye class="h-3.5 w-3.5" />
-                <span>Preview PDF</span>
-              </button>
-
-              <button
-                type="button"
-                @click="handleDownloadResume(primaryResume)"
+                @click.stop="handleDownloadResume(primaryResume)"
                 class="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-text-secondary hover:text-text-strong hover:bg-surface-raised transition shadow-xs cursor-pointer"
                 title="Download file"
               >
