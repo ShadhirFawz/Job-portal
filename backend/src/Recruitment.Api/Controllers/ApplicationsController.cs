@@ -49,6 +49,36 @@ public class ApplicationsController : ControllerBase
         }
     }
 
+    [HttpGet("my")]
+    public async Task<IActionResult> FetchMyApplications([FromQuery] Guid userId)
+    {
+        if (userId == Guid.Empty) return BadRequest(new { message = "userId is required." });
+        var list = await _applicationService.FetchMyApplicationsAsync(userId);
+        return Ok(list);
+    }
+
+    [HttpPost("{slug}/withdraw")]
+    public async Task<IActionResult> WithdrawApplication(string slug, [FromQuery] Guid userId)
+    {
+        if (userId == Guid.Empty) return BadRequest(new { message = "userId is required." });
+        var applicationId = await _applicationService.GetApplicationIdBySlugAsync(slug);
+        if (applicationId == Guid.Empty) return NotFound(new { message = "Application not found." });
+
+        try
+        {
+            await _applicationService.WithdrawApplicationAsync(applicationId, userId);
+            return Ok(new { success = true });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpGet("job/{slug}")]
     public async Task<IActionResult> FetchApplicationsForJob(string slug)
     {

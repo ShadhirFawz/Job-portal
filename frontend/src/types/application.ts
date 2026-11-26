@@ -31,6 +31,56 @@ export interface JobApplicationResume {
   file_type: string | null
 }
 
+export interface CandidateApplicationOrg {
+  id: string
+  name: string
+  slug?: string | null
+  avatar_path?: string | null
+}
+
+export interface CandidateApplicationJob {
+  id: string
+  title: string
+  slug?: string | null
+  job_type: string
+  work_mode: string
+  city?: string | null
+  country_code?: string | null
+  status: string
+  application_deadline?: string | null
+  organization?: CandidateApplicationOrg | null
+}
+
+export interface CandidateSelectionStage {
+  id: string
+  title: string
+  slug?: string | null
+  process_type: string
+  order_index: number
+  is_mandatory: boolean
+  time_limit_minutes?: number | null
+  passing_score?: number | null
+  question_bank_id?: string | null
+}
+
+export interface CandidateQuizAttemptSummary {
+  id: string
+  selection_process_id: string
+  application_id?: string | null
+  status: 'not_started' | 'in_progress' | 'submitted' | 'graded' | 'expired'
+  score: number
+  max_score: number
+  percentage: number
+  passed?: boolean | null
+  requires_manual_review?: boolean
+  started_at: string
+  submitted_at?: string | null
+  reviewed_at?: string | null
+  passing_score?: number | null
+  time_limit_minutes?: number | null
+  stage_title?: string | null
+}
+
 export interface JobApplication {
   id: string
   job_id: string
@@ -47,6 +97,9 @@ export interface JobApplication {
   user?: JobApplicantUser
   resume?: JobApplicationResume | null
   slug: string
+  job?: CandidateApplicationJob | null
+  selection_stages?: CandidateSelectionStage[]
+  quiz_attempts?: CandidateQuizAttemptSummary[]
 }
 
 export interface CreateApplicationInput {

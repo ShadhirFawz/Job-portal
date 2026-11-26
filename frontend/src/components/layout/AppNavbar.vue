@@ -19,6 +19,7 @@ import {
   X,
   Home,
   FileText,
+  Briefcase,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -225,6 +226,19 @@ function isActive(path: string): boolean {
                 Organizations
               </router-link>
             </template>
+
+            <router-link
+              to="/applications"
+              :class="[
+                'px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5',
+                isActive('/applications')
+                  ? 'bg-primary-light text-primary'
+                  : 'text-text-muted hover:text-text-strong hover:bg-surface-raised',
+              ]"
+            >
+              <Briefcase class="h-3.5 w-3.5" />
+              Applications
+            </router-link>
 
             <router-link
               to="/resumes"
@@ -643,6 +657,33 @@ function isActive(path: string): boolean {
                 Register Company
               </router-link>
             </template>
+
+            <router-link
+              to="/applications"
+              :class="[
+                'px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5',
+                isActive('/applications')
+                  ? 'bg-primary-light text-primary'
+                  : 'text-text-muted hover:text-text-strong hover:bg-surface-raised',
+              ]"
+            >
+              <Briefcase class="h-3.5 w-3.5" />
+              Applications
+            </router-link>
+
+            <router-link
+              to="/applications"
+              @click="closeMenus"
+              :class="[
+                'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition',
+                isActive('/applications')
+                  ? 'bg-primary-light text-primary'
+                  : 'text-text-muted hover:bg-surface-raised hover:text-text-strong',
+              ]"
+            >
+              <Briefcase class="h-4 w-4 shrink-0" />
+              My Applications
+            </router-link>
 
             <router-link
               to="/resumes"
