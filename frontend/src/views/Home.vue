@@ -74,6 +74,14 @@ const primaryOrg = computed(() => {
           </router-link>
 
           <router-link
+            to="/applications"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs sm:text-sm backdrop-blur-xs border border-white/20 transition"
+          >
+            <Briefcase class="h-4 w-4" />
+            My Applications
+          </router-link>
+
+          <router-link
             v-if="primaryOrg"
             :to="`/organizations/${primaryOrg.slug || primaryOrg.id}`"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs sm:text-sm backdrop-blur-xs border border-white/20 transition"

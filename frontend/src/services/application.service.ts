@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { supabase } from '@/lib/supabase'
 import type {
   JobApplication,
   CreateApplicationInput,
@@ -64,6 +65,42 @@ export const applicationService = {
       console.error('Error fetching applications via API:', error.message)
       return []
     }
+  },
+
+  /**
+   * Fetch all applications submitted by the current user (with job, selection stages, and quiz attempts).
+   */
+  async fetchMyApplications(userId: string): Promise<JobApplication[]> {
+    if (!userId) return []
+    try {
+      const { data, error } = await supabase.rpc('get_candidate_applications', {
+        p_user_id: userId,
+      })
+      if (!error && Array.isArray(data)) {
+        return data as JobApplication[]
+      }
+    } catch (rpcErr) {
+      console.warn('Supabase rpc get_candidate_applications failed, falling back to API:', rpcErr)
+    }
+
+    try {
+      return await api.get<JobApplication[]>('applications/my', { userId })
+    } catch (error: any) {
+      console.error('Error fetching my applications via API:', error.message)
+      return []
+    }
+  },
+
+  /**
+   * Withdraw a candidate's own application.
+   */
+  async withdrawApplication(applicationSlugOrId: string, userId: string): Promise<void> {
+    if (!applicationSlugOrId || !userId) return
+    await api.post<{ success: boolean }>(
+      `applications/${applicationSlugOrId}/withdraw`,
+      {},
+      { userId }
+    )
   },
 
   /**
