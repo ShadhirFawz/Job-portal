@@ -105,6 +105,141 @@ public class JobApplicationDto
 
     [JsonPropertyName("slug")]
     public string? Slug { get; set; }
+
+    [JsonPropertyName("job")]
+    public CandidateApplicationJobDto? Job { get; set; }
+
+    [JsonPropertyName("selection_stages")]
+    public List<CandidateSelectionStageDto>? SelectionStages { get; set; }
+
+    [JsonPropertyName("quiz_attempts")]
+    public List<CandidateQuizAttemptSummaryDto>? QuizAttempts { get; set; }
+}
+
+public class CandidateApplicationOrgDto
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; set; }
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("slug")]
+    public string? Slug { get; set; }
+
+    [JsonPropertyName("avatar_path")]
+    public string? AvatarPath { get; set; }
+}
+
+public class CandidateApplicationJobDto
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; set; }
+
+    [JsonPropertyName("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonPropertyName("slug")]
+    public string? Slug { get; set; }
+
+    [JsonPropertyName("job_type")]
+    public string JobType { get; set; } = string.Empty;
+
+    [JsonPropertyName("work_mode")]
+    public string WorkMode { get; set; } = string.Empty;
+
+    [JsonPropertyName("city")]
+    public string? City { get; set; }
+
+    [JsonPropertyName("country_code")]
+    public string? CountryCode { get; set; }
+
+    [JsonPropertyName("status")]
+    public string Status { get; set; } = string.Empty;
+
+    [JsonPropertyName("application_deadline")]
+    public DateTime? ApplicationDeadline { get; set; }
+
+    [JsonPropertyName("organization")]
+    public CandidateApplicationOrgDto? Organization { get; set; }
+}
+
+public class CandidateSelectionStageDto
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; set; }
+
+    [JsonPropertyName("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonPropertyName("slug")]
+    public string? Slug { get; set; }
+
+    [JsonPropertyName("process_type")]
+    public string ProcessType { get; set; } = string.Empty;
+
+    [JsonPropertyName("order_index")]
+    public int OrderIndex { get; set; }
+
+    [JsonPropertyName("is_mandatory")]
+    public bool IsMandatory { get; set; }
+
+    [JsonPropertyName("time_limit_minutes")]
+    public int? TimeLimitMinutes { get; set; }
+
+    [JsonPropertyName("passing_score")]
+    public decimal? PassingScore { get; set; }
+
+    [JsonPropertyName("question_bank_id")]
+    public Guid? QuestionBankId { get; set; }
+}
+
+public class CandidateQuizAttemptSummaryDto
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; set; }
+
+    [JsonPropertyName("selection_process_id")]
+    public Guid SelectionProcessId { get; set; }
+
+    [JsonPropertyName("application_id")]
+    public Guid? ApplicationId { get; set; }
+
+    [JsonPropertyName("status")]
+    public string Status { get; set; } = string.Empty;
+
+    [JsonPropertyName("score")]
+    public decimal Score { get; set; }
+
+    [JsonPropertyName("max_score")]
+    public decimal MaxScore { get; set; }
+
+    [JsonPropertyName("percentage")]
+    public decimal Percentage { get; set; }
+
+    [JsonPropertyName("passed")]
+    public bool? Passed { get; set; }
+
+    [JsonPropertyName("requires_manual_review")]
+    public bool RequiresManualReview { get; set; }
+
+    [JsonPropertyName("started_at")]
+    public DateTime StartedAt { get; set; }
+
+    [JsonPropertyName("submitted_at")]
+    public DateTime? SubmittedAt { get; set; }
+
+    [JsonPropertyName("reviewed_at")]
+    public DateTime? ReviewedAt { get; set; }
+
+    [JsonPropertyName("passing_score")]
+    public decimal? PassingScore { get; set; }
+
+    [JsonPropertyName("time_limit_minutes")]
+    public int? TimeLimitMinutes { get; set; }
+
+    [JsonPropertyName("stage_title")]
+    public string? StageTitle { get; set; }
 }
 
 public class CreateApplicationRequest

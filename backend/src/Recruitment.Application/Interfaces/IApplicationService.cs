@@ -8,6 +8,8 @@ public interface IApplicationService
     Task<JobApplicationDto?> FetchUserApplicationAsync(Guid jobId, Guid userId);
     Task<JobApplicationDto> ApplyForJobAsync(CreateApplicationRequest request);
     Task<List<JobApplicationDto>> FetchApplicationsForJobAsync(Guid jobId);
+    Task<List<JobApplicationDto>> FetchMyApplicationsAsync(Guid userId);
+    Task WithdrawApplicationAsync(Guid applicationId, Guid userId);
     Task UpdateApplicationStatusAsync(Guid applicationId, string status);
     Task<Guid> GetApplicationIdBySlugAsync(string slug);
 }

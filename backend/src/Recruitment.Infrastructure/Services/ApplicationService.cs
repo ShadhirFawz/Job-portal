@@ -165,6 +165,100 @@ public class ApplicationService : IApplicationService
         }).ToList();
     }
 
+    public async Task<List<JobApplicationDto>> FetchMyApplicationsAsync(Guid userId)
+    {
+        if (userId == Guid.Empty) return [];
+
+        try
+        {
+            var rpcResult = await _supabase.RpcAsync<List<JobApplicationDto>>(
+                "get_candidate_applications", new { p_user_id = userId });
+            if (rpcResult != null)
+            {
+                return rpcResult;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"get_candidate_applications RPC failed, falling back to direct queries: {ex.Message}");
+        }
+
+        // Fallback: fetch raw applications for user
+        var rawApps = await _supabase.GetListAsync<JobApplication>(
+            $"job_applications?user_id=eq.{userId}&select=*&order=applied_at.desc");
+
+        if (rawApps.Count == 0) return [];
+
+        var jobIds = rawApps.Select(a => a.JobId).Distinct().ToList();
+        var jobsMap = new Dictionary<Guid, Job>();
+        if (jobIds.Count > 0)
+        {
+            var jobs = await _supabase.GetListAsync<Job>(
+                $"jobs?id=in.({string.Join(",", jobIds)})&select=*,organization:organizations(id,name,slug,avatar_path)");
+            jobsMap = jobs.ToDictionary(j => j.Id, j => j);
+        }
+
+        return rawApps.Select(a =>
+        {
+            var dto = MapToDto(a);
+            if (jobsMap.TryGetValue(a.JobId, out var j))
+            {
+                dto.Job = new CandidateApplicationJobDto
+                {
+                    Id = j.Id,
+                    Title = j.Title,
+                    Slug = j.Slug,
+                    JobType = j.JobType,
+                    WorkMode = j.WorkMode,
+                    City = j.City,
+                    CountryCode = j.CountryCode,
+                    Status = j.Status,
+                    ApplicationDeadline = j.ApplicationDeadline,
+                    Organization = j.Organization != null ? new CandidateApplicationOrgDto
+                    {
+                        Id = j.Organization.Id,
+                        Name = j.Organization.Name,
+                        Slug = j.Organization.Slug,
+                        AvatarPath = j.Organization.AvatarPath
+                    } : null
+                };
+            }
+            return dto;
+        }).ToList();
+    }
+
+    public async Task WithdrawApplicationAsync(Guid applicationId, Guid userId)
+    {
+        try
+        {
+            await _supabase.RpcVoidAsync("withdraw_candidate_application", new
+            {
+                p_application_id = applicationId,
+                p_user_id = userId
+            });
+            return;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"withdraw_candidate_application RPC failed, falling back: {ex.Message}");
+        }
+
+        var app = await _supabase.GetSingleAsync<JobApplication>($"job_applications?id=eq.{applicationId}");
+        if (app == null) throw new KeyNotFoundException("Application not found.");
+        if (app.UserId != userId) throw new UnauthorizedAccessException("You are not authorized to withdraw this application.");
+        if (app.Status == "hired" || app.Status == "withdrawn")
+            throw new InvalidOperationException($"Cannot withdraw an application that is already {app.Status}.");
+
+        await _supabase.UpdateAsync<JobApplication>(
+            $"job_applications?id=eq.{applicationId}",
+            new
+            {
+                status = "withdrawn",
+                withdrawn_at = DateTime.UtcNow,
+                updated_at = DateTime.UtcNow
+            });
+    }
+
     public async Task UpdateApplicationStatusAsync(Guid applicationId, string status)
     {
         await _supabase.UpdateAsync<JobApplication>(
